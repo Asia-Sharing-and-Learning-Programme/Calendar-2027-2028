@@ -230,10 +230,10 @@ function render(){
   grouped().forEach(function(g){if(!g[1].length)return;h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
   h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
   h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn" id="darkbtn">'+(DARK?'☀ Light mode':'☾ Dark mode')+'</button></div>';
-  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc(me.group_names.join(', ')||'group lead'):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn">🔒 Group lead / admin sign in</button>')+'</div>';
+  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn" data-who="lead">🔒 Group lead / admin sign in</button><button class="fbtn" id="signinbtn2" data-who="member">👥 Group member sign in</button>')+'</div>';
   if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">⚙ Admin</button>':'')+'<button class="fbtn" id="exportbtn">⬇ Download entries</button></div>';
   h+='</div></header>';
-  h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+'; other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
+  h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' ('+(me.role==='member'?'member':'lead')+' access); other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
   h+='<div class="ytabs">'+[['2027','2027'],['2028','2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
   h+='<div class="grid'+(YSEL==='both'?'':' one')+'"><div class="h" style="grid-column:span 2"></div>';
@@ -361,11 +361,11 @@ function persist(){
 }
 /* who is signed in */
 function refreshMe(){
-  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[]};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
+  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',role:d.role||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[]};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
 }
-function openSignin(){
+function openSignin(kind){
   curKey=null;editId=null;
-  document.getElementById('modal').innerHTML='<h3>Sign in to edit</h3><div class="signin"><p>Enter your approved ASLP email. We\'ll send you a sign-in link — open it on this device to start editing.</p></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b p" id="si-go">Send sign-in link</button></div>';
+  document.getElementById('modal').innerHTML='<h3>'+(kind==='member'?'Group member sign in':'Group lead / admin sign in')+'</h3><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll send you a sign-in link — open it on this device to start editing.</p></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b p" id="si-go">Send sign-in link</button></div>';
   document.getElementById('ov').classList.add('on');
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
 }
@@ -375,7 +375,7 @@ function sendLink(){
   go.disabled=true;err.textContent='';
   sb.rpc('cal_check_email',{p_email:em}).then(function(r){
     if(r.error)throw r.error;
-    if(!r.data){go.disabled=false;err.textContent='This email is not on the list of approved ASLP editors. Ask a programme coordinator to add it.';return}
+    if(!r.data){go.disabled=false;err.textContent='This email is not registered for the ASLP calendar. Ask an ASLP admin to add it.';return}
     return sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
       if(r2.error)throw r2.error;
       document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in link to <b>'+esc(em)+'</b>. Open it on this device; the calendar will open ready for editing.</p></div><div class="btns"><button class="b p" id="f-cancel">OK</button></div>';
@@ -393,22 +393,22 @@ function openAdmin(){document.getElementById('adm').classList.add('on');document
       types:typesFromCurrent(),groups:JSON.parse(JSON.stringify(LEADGROUPS)),terr:COUNTRIES.map(function(g){return {cl:clName(g[0]),t:tName(g[0]),c:g[1].join(', ')}})};
     admMsg='';renderAdmin()}).catch(function(e){document.getElementById('adm').innerHTML='<div class="adm"><p class="msg bad">Could not open admin: '+esc(errText(e))+'</p><button class="b" data-a="close">Close</button></div>'})}
 function closeAdmin(){document.getElementById('adm').classList.remove('on');render()}
-function roleSel(v){return '<select data-f="role">'+[['lead','Group lead – sees full details for their group'],['admin','Admin – sees everything and can change it']].map(function(r){return '<option value="'+r[0]+'"'+(r[0]===v?' selected':'')+'>'+r[1]+'</option>'}).join('')+'</select>'}
+function roleSel(v){return '<select data-f="role">'+[['member','Group member – sees full details for their group'],['lead','Group lead – as members, plus hidden types if their group allows'],['admin','Admin – sees everything and can change it']].map(function(r){return '<option value="'+r[0]+'"'+(r[0]===v?' selected':'')+'>'+r[1]+'</option>'}).join('')+'</select>'}
 function grpSel(v){return '<select data-f="grp"><option value="">— choose group —</option>'+adm.groups.map(function(g){return '<option value="'+esc(g.key)+'"'+(g.key===v?' selected':'')+'>'+esc(g.name)+'</option>'}).join('')+'</select>'}
 function renderAdmin(){
   var h='<div class="adm"><div class="adm-top"><h2>⚙ Calendar admin</h2><span class="msg'+(admBad?' bad':'')+'" id="admmsg">'+esc(admMsg)+'</span><span style="margin-left:auto"></span><button class="b" data-a="close">Back to calendar</button></div>';
-  h+='<div class="adm-tabs">'+[['access','Access'],['groups','Group leads'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  h+='<div class="adm-tabs">'+[['access','Access'],['groups','Groups'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
   if(admTab==='access'){
-    h+='<p class="note">Anyone can see the public summary (dates and types only). People listed here sign in with an emailed link. <b>Group leads</b> see full details for entries of their group (set up in the Group leads tab) and a summary of everything else. <b>Admins</b> see everything, can add and change entries, and can use this page.</p>';
+    h+='<p class="note">Anyone can see the public summary (dates and types only). People listed here sign in with an emailed link. <b>Group members</b> see full details for entries of their group (set up in the Groups tab) and a summary of everything else. <b>Group leads</b> see the same, plus the hidden types if their group is allowed. <b>Admins</b> see everything, can add and change entries, and can use this page.</p>';
     h+='<table><thead><tr><th>Email</th><th>Access</th><th>Group</th><th></th></tr></thead><tbody id="adm-users">';
     adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td>'+grpSel(u.grp)+'</td><td><button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button></td></tr>'});
     if(!adm.users.length)h+='<tr><td colspan="4" class="msg">No one added here yet.</td></tr>';
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-user">+ Add person</button><button class="b p" data-a="save-users">Save access</button></div>';
-    h+='<div class="box" style="margin-top:20px"><b style="font-size:13px">Also have access automatically</b><p class="note" style="margin:4px 0 6px">These come from the CD Strategy dashboard\'s admin list and are managed there.</p><table><tbody>'+(adm.auto.length?adm.auto.map(function(a){return '<tr><td>'+esc(a.email)+'</td><td>'+esc(a.role==='admin'?'Admin':'Group lead')+'</td><td class="msg">'+esc(a.source)+'</td></tr>'}).join(''):'<tr><td class="msg">None</td></tr>')+'</tbody></table></div>';
+    h+='<div class="box" style="margin-top:20px"><b style="font-size:13px">Also have access automatically</b><p class="note" style="margin:4px 0 6px">These come from the CD Strategy dashboard\'s admin list and are managed there.</p><table><tbody>'+(adm.auto.length?adm.auto.map(function(a){return '<tr><td>'+esc(a.email)+'</td><td>'+esc(a.role==='admin'?'Admin':a.role==='member'?'Group member':'Group lead')+'</td><td class="msg">'+esc(a.source)+'</td></tr>'}).join(''):'<tr><td class="msg">None</td></tr>')+'</tbody></table></div>';
   }
   if(admTab==='groups'){
-    h+='<p class="note">For each group: which entry types its leads see <b>in full</b> (an entry counts if its main type or any linked type is ticked), and whether they can see the <b>hidden types</b> (marked hidden in the Types tab, such as ASLP Phase 2 and Significant Change Process). Everything else shows to them as a summary.</p>';
-    h+='<table><thead><tr><th style="width:180px">Group name</th><th>Sees full details of</th><th style="width:110px">Hidden types</th><th></th></tr></thead><tbody id="adm-groups">';
+    h+='<p class="note">For each group: which entry types its leads see <b>in full</b> (an entry counts if its main type or any linked type is ticked), and whether its <b>leads</b> (not members) can see the <b>hidden types</b> (marked hidden in the Types tab, such as ASLP Phase 2 and Significant Change Process). Everything else shows to them as a summary.</p>';
+    h+='<table><thead><tr><th style="width:180px">Group name</th><th>Sees full details of</th><th style="width:120px">Leads see hidden types</th><th></th></tr></thead><tbody id="adm-groups">';
     adm.groups.forEach(function(g,i){h+='<tr data-i="'+i+'"><td><input data-f="name" value="'+esc(g.name)+'"></td><td><div class="lks" style="max-height:110px">'+adm.types.map(function(x){return '<label class="lkc"><input type="checkbox" data-t="'+esc(x.key)+'"'+((g.types||[]).indexOf(x.key)>=0?' checked':'')+'><i class="sw" style="background:'+esc(x.color)+'"></i>'+esc(x.label)+'</label>'}).join('')+'</div></td><td><label class="lkc"><input type="checkbox" data-r="1"'+(g.restricted?' checked':'')+'>Can see</label></td><td><button class="lnk del" data-a="rm-group" data-i="'+i+'">Remove</button></td></tr>'});
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-group">+ Add group</button><button class="b p" data-a="save-groups">Save groups</button></div>';
   }
@@ -445,7 +445,7 @@ document.addEventListener('click',function(ev){
   if(a==='tab'){admTab=t.getAttribute('data-tab');admMsg='';renderAdmin();return}
   if(a==='add-user'){adm.users.push({email:'',role:'lead',grp:''});renderAdmin();var ins=document.querySelectorAll('#adm-users input');if(ins.length)ins[ins.length-1].focus();return}
   if(a==='rm-user'){adm.users.splice(i,1);renderAdmin();admSay('Removed — click Save access to confirm');return}
-  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(u.email)});if(bad.length){admSay('Check this email: '+bad[0].email,true);return}var ng=us.filter(function(u){return u.role==='lead'&&!u.grp});if(ng.length){admSay('Choose a group for '+ng[0].email,true);return}admSave('cal_admin_set_users',{p_users:us.map(function(u){return {email:u.email.toLowerCase(),role:u.role,grp:u.role==='lead'?u.grp:''}})},'Access saved');return}
+  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(u.email)});if(bad.length){admSay('Check this email: '+bad[0].email,true);return}var ng=us.filter(function(u){return u.role!=='admin'&&!u.grp});if(ng.length){admSay('Choose a group for '+ng[0].email,true);return}admSave('cal_admin_set_users',{p_users:us.map(function(u){return {email:u.email.toLowerCase(),role:u.role,grp:u.role!=='admin'?u.grp:''}})},'Access saved');return}
   if(a==='add-type'){adm.types.push({key:'',label:'',color:'#5c6bc0',group:'Activities'});renderAdmin();var ti=document.querySelectorAll('#adm-types input[data-f=label]');if(ti.length)ti[ti.length-1].focus();return}
   if(a==='rm-type'){adm.types.splice(i,1);renderAdmin();admSay('Removed — click Save types to confirm');return}
   if(a==='save-types'){var ty=adm.types.filter(function(x){return x.label});if(!ty.length){admSay('Add at least one type',true);return}ty.forEach(function(x){if(!x.key)x.key=slug(x.label)});adm.types=ty;admSave('cal_admin_set_setting',{p_key:'types',p_value:ty},'Types saved');return}
@@ -465,7 +465,7 @@ document.addEventListener('click',function(ev){
   if(t.id==='exportbtn'){download('aslp-calendar-entries.json',JSON.stringify(state,null,1),'application/json');return}
   if(t.hasAttribute&&t.hasAttribute('data-ysel')){YSEL=t.getAttribute('data-ysel');try{localStorage.setItem('aslpYear',YSEL)}catch(e){}render();return}
   if(t.id==='adminbtn'){openAdmin();return}
-  if(t.id==='signinbtn'){openSignin();return}
+  if(t.id==='signinbtn'||t.id==='signinbtn2'){openSignin(t.getAttribute('data-who'));return}
   if(t.id==='si-go'){sendLink();return}
   if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};load()});return}
   if(t.id==='f-from-clear'){ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('#f-from input:checked'),function(x){x.checked=false});var fo2=document.getElementById('f-from-other');if(fo2)fo2.value='';return}

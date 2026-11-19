@@ -130,7 +130,7 @@ html.dark .ytabs button.on{background:#e6e6e3;color:#111}
 </head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
 <script id="app">
 (function(){
-var ALLYEARS=[2027,2028],YSEL=(function(){try{return localStorage.getItem('aslpYear')||'2027'}catch(e){return '2027'}})();
+var ALLYEARS=[2027,2028],YSEL=(function(){var v;try{v=localStorage.getItem('aslpYear')}catch(e){}return v==='2028'?'2028':'2027'})();
 function shownYears(){return YSEL==='both'?ALLYEARS:[+YSEL]}
 var LOGO_LIGHT='aslp-logo-light.png',LOGO_DARK='aslp-logo-dark.png';
 var SUPABASE_URL='https://emvtqqjiirgcgghcaeps.supabase.co',SUPABASE_KEY='sb_publishable_cHpOvFlPWmirE_426PPIbg_XYo-klC9';
@@ -235,7 +235,7 @@ function render(){
   h+='</div></header>';
   h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+'; other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
-  h+='<div class="ytabs">'+[['2027','2027'],['2028','2028'],['both','2027 & 2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
+  h+='<div class="ytabs">'+[['2027','2027'],['2028','2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
   h+='<div class="grid'+(YSEL==='both'?'':' one')+'"><div class="h" style="grid-column:span 2"></div>';
   for(var w=0;w<6;w++)h+='<div class="h wk" style="grid-column:span '+(w<5?7:2)+'">'+(w<5?'Week ':'Wk ')+(w+1)+'</div>';
   h+='<div class="h" style="grid-column:span 2"></div>';

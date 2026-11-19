@@ -120,11 +120,18 @@ html.dark .err{color:#f87171}
 .adm .msg{font-size:12px;color:var(--muted)}
 .adm .msg.bad{color:#b91c1c}
 html.dark .adm-ov{background:var(--bg)}
+.ytabs{display:flex;gap:4px;margin:0 0 8px}
+.ytabs button{font:inherit;font-size:13px;padding:6px 14px;border:1px solid var(--line);background:var(--head);color:var(--ink);border-radius:6px;cursor:pointer}
+.ytabs button.on{background:#1f2328;color:#fff;border-color:#1f2328}
+html.dark .ytabs button.on{background:#e6e6e3;color:#111}
+.grid.one .c{height:calc((100vh - 250px)/12);min-height:40px;max-height:72px}
+.lim{font-size:10px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;vertical-align:1px}
 </style>
 </head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
 <script id="app">
 (function(){
-var YEARS=[2027,2028];
+var ALLYEARS=[2027,2028],YSEL=(function(){try{return localStorage.getItem('aslpYear')||'2027'}catch(e){return '2027'}})();
+function shownYears(){return YSEL==='both'?ALLYEARS:[+YSEL]}
 var LOGO_LIGHT='aslp-logo-light.png',LOGO_DARK='aslp-logo-dark.png';
 var SUPABASE_URL='https://emvtqqjiirgcgghcaeps.supabase.co',SUPABASE_KEY='sb_publishable_cHpOvFlPWmirE_426PPIbg_XYo-klC9';
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{flowType:'implicit',persistSession:true,detectSessionInUrl:true,autoRefreshToken:true,storageKey:'aslp-calendar-auth'}});
@@ -153,19 +160,20 @@ var DEFAULT_COUNTRIES=[
 ['SPEA 2 · Papua New Guinea and Solomon Islands Territory',['Papua New Guinea','Solomon Islands']],
 ['SPEA 2 · Australia Territory',['Australia']],
 ['SPEA 2 · New Zealand, Fiji, Tonga and Samoa Territory',['New Zealand','Fiji Islands','Tonga','Samoa']]];
-var CATS=DEFAULT_CATS,GROUPS=DEFAULT_GROUPS,COUNTRIES=DEFAULT_COUNTRIES;
-function typesFromCurrent(){var gOf={};GROUPS.forEach(function(g){g[1].forEach(function(k){gOf[k]=g[0]})});return Object.keys(CATS).map(function(k){return {key:k,label:CATS[k].label,color:CATS[k].color,group:gOf[k]||'Others'}})}
+var LEADGROUPS=[],CATS=DEFAULT_CATS,GROUPS=DEFAULT_GROUPS,COUNTRIES=DEFAULT_COUNTRIES;
+function typesFromCurrent(){var gOf={};GROUPS.forEach(function(g){g[1].forEach(function(k){gOf[k]=g[0]})});return Object.keys(CATS).map(function(k){return {key:k,label:CATS[k].label,color:CATS[k].color,group:gOf[k]||'Others',restricted:!!CATS[k].restricted}})}
 function applySettings(s){
-  if(Array.isArray(s.types)&&s.types.length){var c={},g={Groups:[],Activities:[],Others:[]};s.types.forEach(function(x){if(!x||!x.key)return;c[x.key]={label:x.label||x.key,color:x.color||'#9e9e9e'};(g[x.group]||g.Others).push(x.key)});if(!c.other)c.other={label:'Other',color:'#9e9e9e'};CATS=c;GROUPS=[['Groups',g.Groups],['Activities',g.Activities],['Others',g.Others]]}
+  if(Array.isArray(s.types)&&s.types.length){var c={},g={Groups:[],Activities:[],Others:[]};s.types.forEach(function(x){if(!x||!x.key)return;c[x.key]={label:x.label||x.key,color:x.color||'#9e9e9e',restricted:!!x.restricted};(g[x.group]||g.Others).push(x.key)});if(!c.other)c.other={label:'Other',color:'#9e9e9e'};CATS=c;GROUPS=[['Groups',g.Groups],['Activities',g.Activities],['Others',g.Others]]}
   else{CATS=DEFAULT_CATS;GROUPS=DEFAULT_GROUPS}
   COUNTRIES=(Array.isArray(s.countries)&&s.countries.length)?s.countries:DEFAULT_COUNTRIES;
+  if(Array.isArray(s.lead_groups))LEADGROUPS=s.lead_groups;
 }
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['M','T','W','T','F','S','S'];
 /* ---------- storage ---------- */
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}
-var state={events:[]},synced={},loaded=false,me={email:'',can_view:false,can_edit:false,is_admin:false},saving=false;
+var state={events:[]},synced={},loaded=false,me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]},saving=false;
 var statusText='',curKey=null,editId=null;
 var DARK=lsGet('aslpDark')==='1';document.documentElement.classList.toggle('dark',DARK);
 var hidden={};try{hidden=JSON.parse(lsGet('aslpHidden')||'{}')||{}}catch(e){hidden={}}
@@ -178,7 +186,9 @@ function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&am
 function fmt(k){var p=k.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}
 function range(e){return e.start===e.end?fmt(e.start):fmt(e.start)+' – '+fmt(e.end)}
 function evOn(k){return state.events.filter(function(e){return e.start<=k&&k<=e.end}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:(a.title<b.title?-1:1)})}
-function catOf(e){return CATS[e.cat]||CATS.other}
+function catOf(e){return CATS[e.cat]||CATS.other||{label:'Other',color:'#9e9e9e'}}
+function isLim(e){return !me.can_view||!!e.limited}
+function ttl(e){return e.title||catOf(e).label}
 function links(e){return (e.links||[]).filter(function(c){return CATS[c]&&c!==e.cat})}
 function labels(e){return [catOf(e).label].concat(links(e).map(function(c){return CATS[c].label})).join(' + ')}
 function visible(e){if(!hidden[e.cat])return true;var l=e.links||[];for(var i=0;i<l.length;i++)if(CATS[l[i]]&&!hidden[l[i]])return true;return false}
@@ -217,20 +227,20 @@ function aslfVal(){var w=document.getElementById('f-aslf');if(!w||w.style.displa
 /* ---------- render ---------- */
 function render(){
   var h='<div class="wrap"><header><div class="brand"><img class="logo" src="'+(DARK?LOGO_DARK:LOGO_LIGHT)+'" alt="ASLP – Asia-Pacific Sharing & Learning Programme"><h1>Calendar 2027–2028</h1></div><div class="legend">';
-  if(me.can_view)grouped().forEach(function(g){h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
-  if(me.can_view)h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
+  grouped().forEach(function(g){h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
+  h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
   h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn" id="darkbtn">'+(DARK?'☀ Light mode':'☾ Dark mode')+'</button></div>';
-  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.can_edit?'':' (view only)')+(me.is_admin?' · admin':'')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn">Sign in</button>')+'</div>';
+  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc(me.group_names.join(', ')||'group lead'):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn">🔒 Group lead / admin sign in</button>')+'</div>';
   if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">⚙ Admin</button>':'')+'<button class="fbtn" id="exportbtn">⬇ Download entries</button></div>';
   h+='</div></header>';
-  if(me.can_view)h+='<p class="hint">'+(me.can_edit?'Click any day to add an entry. ':'Click any day to see its details (you have view-only access). ')+'Use the tick boxes above to filter: an entry shows if its type or any of its linked types is ticked.</p>';
-  if(!me.can_view){h+='<div class="loading">'+(me.email?'<b>'+esc(me.email)+'</b> is not on the list of approved ASLP users, so the calendar can\'t be shown.<br>Ask a programme coordinator to add your email, or sign out and use another email.':'This calendar is private to the ASLP team.<br>Sign in with your approved ASLP email to view and edit it.<br><br><button class="b p" id="signinbtn">Sign in</button>')+'</div></div>';document.getElementById('root').innerHTML=h;return}
+  h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+'; other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
-  h+='<div class="grid"><div class="h" style="grid-column:span 2"></div>';
+  h+='<div class="ytabs">'+[['2027','2027'],['2028','2028'],['both','2027 & 2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
+  h+='<div class="grid'+(YSEL==='both'?'':' one')+'"><div class="h" style="grid-column:span 2"></div>';
   for(var w=0;w<6;w++)h+='<div class="h wk" style="grid-column:span '+(w<5?7:2)+'">'+(w<5?'Week ':'Wk ')+(w+1)+'</div>';
   h+='<div class="h" style="grid-column:span 2"></div>';
   for(var i=0;i<37;i++)h+='<div class="h'+(i%7>4?' we':'')+(i%7===6?' wb':'')+'">'+WD[i%7]+'</div>';
-  YEARS.forEach(function(YEAR){
+  shownYears().forEach(function(YEAR){
     h+='<div class="yh">'+YEAR+'</div>';
     for(var m=0;m<12;m++){
       var qe=(m%3===2)?' qe':'';
@@ -242,10 +252,10 @@ function render(){
         if(d<1||d>days){h+='<div class="c x'+qe+(j%7===6?' wb':'')+'"></div>';continue}
         var k=key(YEAR,m,d),cls='c'+qe+(j%7>4?' we':'')+(j%7===6?' wb':''),evs=evOn(k).filter(visible);
         var tip=fmt(k)+' · Week '+(Math.floor(j/7)+1);
-        evs.forEach(function(e){tip+='\n• '+e.title+' ('+labels(e)+')'+(routeTxt(e)?'\n   '+routeTxt(e):'')+(aslfTxt(e)?'\n   '+aslfTxt(e):'')+(e.notes?'\n   '+e.notes:'')});
+        evs.forEach(function(e){tip+='\n• '+ttl(e)+' ('+labels(e)+')'+(routeTxt(e)?'\n   '+routeTxt(e):'')+(aslfTxt(e)?'\n   '+aslfTxt(e):'')+(e.notes?'\n   '+e.notes:'')});
         h+='<div class="'+cls+'" data-k="'+k+'" title="'+esc(tip)+'"><div class="d">'+d+'</div>';
         evs.slice(0,2).forEach(function(e){
-          var lbl=(e.start===k||d===1||j%7===0)?esc(e.title):'';
+          var lbl=(e.start===k||d===1||j%7===0)?esc(ttl(e)):'';
           h+='<div class="ev" style="background:'+catOf(e).color+';color:'+ink(catOf(e).color)+'">'+links(e).map(function(c2){return '<i class="lk" style="background:'+CATS[c2].color+'"></i>'}).join('')+(lbl||'&nbsp;')+'</div>';
         });
         if(evs.length>2)h+='<div class="more">+'+(evs.length-2)+' more</div>';
@@ -256,7 +266,7 @@ function render(){
   h+='</div><div class="list"><h2>'+(Object.keys(hidden).length?'Filtered entries ('+state.events.filter(visible).length+' of '+state.events.length+')':'All entries ('+state.events.length+')')+'</h2>';
   var all=state.events.filter(visible).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0});
   if(!all.length)h+='<div class="emptymsg">Nothing planned yet — click a day above to start.</div>';
-  all.forEach(function(e){h+='<div class="row" data-open="'+e.start+'"><i class="sw" style="background:'+catOf(e).color+'"></i>'+links(e).map(function(c2){return '<i class="sw" style="background:'+CATS[c2].color+';margin-left:-8px;border:1px solid #fff"></i>'}).join('')+'<span class="dt">'+esc(range(e))+'</span><span>'+esc(e.title)+(routeTxt(e)?' ('+esc(routeTxt(e))+')':'')+(aslfTxt(e)?' ('+esc(aslfTxt(e))+')':'')+(e.notes?' <span style="color:var(--muted)">— '+esc(e.notes.length>80?e.notes.slice(0,80)+'…':e.notes)+'</span>':'')+'</span></div>'});
+  all.forEach(function(e){h+='<div class="row" data-open="'+e.start+'"><i class="sw" style="background:'+catOf(e).color+'"></i>'+links(e).map(function(c2){return '<i class="sw" style="background:'+CATS[c2].color+';margin-left:-8px;border:1px solid #fff"></i>'}).join('')+'<span class="dt">'+esc(range(e))+'</span><span>'+esc(ttl(e))+(routeTxt(e)?' ('+esc(routeTxt(e))+')':'')+(aslfTxt(e)?' ('+esc(aslfTxt(e))+')':'')+(e.notes?' <span style="color:var(--muted)">— '+esc(e.notes.length>80?e.notes.slice(0,80)+'…':e.notes)+'</span>':'')+'</span></div>'});
   h+='</div></div>';
   document.getElementById('root').innerHTML=h;
 }
@@ -270,10 +280,11 @@ function openDay(k){
 }
 function drawModal(f){
   var evs=evOn(curKey),h='<h3>'+esc(fmt(curKey))+'</h3><div class="sub">'+wkLabel(curKey)+'</div>';
-  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(e.title)+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(me.can_edit?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
+  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(me.can_edit?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
   if(!me.can_edit){
     if(!evs.length)h+='<p class="sub">Nothing planned on this day.</p>';
-    h+='<p class="sub" style="margin-top:12px">You have view-only access. Ask an admin if you need to add or change entries.</p>';
+    var anyLim=evs.some(isLim);
+    h+='<p class="sub" style="margin-top:12px">'+(!me.can_view?'This public summary only shows the type of activity. Details are private to ASLP groups — please contact the ASLP team if you need more information.':anyLim?'Entries marked <b>summary only</b> belong to other ASLP groups. Contact the ASLP team if you need their details.':'Only admins can add or change entries.')+'</p>';
     h+='<div class="btns">'+(me.email?'':'<button class="b" id="signinbtn">Sign in</button>')+'<button class="b p" id="f-cancel">Close</button></div>';
     document.getElementById('modal').innerHTML=h;return;
   }
@@ -324,9 +335,10 @@ function errText(e){var m=(e&&(e.message||e.error_description))||String(e||'');r
 /* load all entries from the shared database */
 function load(quiet){
   if(!quiet)setStatus('Loading…');
-  return sb.rpc('cal_get').then(function(r){
+  var pub=!me.can_view;
+  return sb.rpc(pub?'cal_public':'cal_get').then(function(r){
     if(r.error)throw r.error;
-    var d=r.data||{};applySettings(d.settings||{});var evs=(d.events||[]).map(clean);
+    var d=r.data||{};applySettings(pub?{types:d.types||[]}:(d.settings||{}));var evs=(d.events||[]).map(clean);
     state={events:evs};synced={};evs.forEach(function(e){synced[e.id]=sig(e)});loaded=true;
     if(!quiet&&!saving)setStatus('Up to date');
     if(!document.getElementById('ov').classList.contains('on'))render();
@@ -349,7 +361,7 @@ function persist(){
 }
 /* who is signed in */
 function refreshMe(){
-  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin};if(me.can_view){setStatus(loaded?statusText:'Loading…');render();return load()}loaded=false;state={events:[]};synced={};setStatus('');render()}).catch(function(){me={email:'',can_edit:false};render()});
+  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[]};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
 }
 function openSignin(){
   curKey=null;editId=null;
@@ -377,26 +389,33 @@ var adm=null,admTab='access',admMsg='',admBad=false;
 function openAdmin(){document.getElementById('adm').classList.add('on');document.getElementById('adm').innerHTML='<div class="adm"><div class="loading">Loading admin settings…</div></div>';
   sb.rpc('cal_admin_get').then(function(r){if(r.error)throw r.error;var d=r.data||{};
     applySettings(d.settings||{});
-    adm={users:(d.users||[]).map(function(u){return {email:u.email,role:u.role}}),auto:d.auto||[],log:d.log||[],
-      types:typesFromCurrent(),terr:COUNTRIES.map(function(g){return {cl:clName(g[0]),t:tName(g[0]),c:g[1].join(', ')}})};
+    adm={users:(d.users||[]).map(function(u){return {email:u.email,role:u.role,grp:u.grp||''}}),auto:d.auto||[],log:d.log||[],
+      types:typesFromCurrent(),groups:JSON.parse(JSON.stringify(LEADGROUPS)),terr:COUNTRIES.map(function(g){return {cl:clName(g[0]),t:tName(g[0]),c:g[1].join(', ')}})};
     admMsg='';renderAdmin()}).catch(function(e){document.getElementById('adm').innerHTML='<div class="adm"><p class="msg bad">Could not open admin: '+esc(errText(e))+'</p><button class="b" data-a="close">Close</button></div>'})}
 function closeAdmin(){document.getElementById('adm').classList.remove('on');render()}
-function roleSel(v){return '<select data-f="role">'+['viewer','editor','admin'].map(function(r){return '<option value="'+r+'"'+(r===v?' selected':'')+'>'+{viewer:'Viewer – can see',editor:'Editor – can add and change',admin:'Admin – can also manage settings'}[r]+'</option>'}).join('')+'</select>'}
+function roleSel(v){return '<select data-f="role">'+[['lead','Group lead – sees full details for their group'],['admin','Admin – sees everything and can change it']].map(function(r){return '<option value="'+r[0]+'"'+(r[0]===v?' selected':'')+'>'+r[1]+'</option>'}).join('')+'</select>'}
+function grpSel(v){return '<select data-f="grp"><option value="">— choose group —</option>'+adm.groups.map(function(g){return '<option value="'+esc(g.key)+'"'+(g.key===v?' selected':'')+'>'+esc(g.name)+'</option>'}).join('')+'</select>'}
 function renderAdmin(){
   var h='<div class="adm"><div class="adm-top"><h2>⚙ Calendar admin</h2><span class="msg'+(admBad?' bad':'')+'" id="admmsg">'+esc(admMsg)+'</span><span style="margin-left:auto"></span><button class="b" data-a="close">Back to calendar</button></div>';
-  h+='<div class="adm-tabs">'+[['access','Access'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  h+='<div class="adm-tabs">'+[['access','Access'],['groups','Group leads'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
   if(admTab==='access'){
-    h+='<p class="note">Who can open the calendar. <b>Viewers</b> can see it, <b>editors</b> can also add, change and delete entries, and <b>admins</b> can also use this page. Everyone signs in with an emailed link.</p>';
-    h+='<table><thead><tr><th>Email</th><th>Access</th><th></th></tr></thead><tbody id="adm-users">';
-    adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td><button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button></td></tr>'});
-    if(!adm.users.length)h+='<tr><td colspan="3" class="msg">No one added here yet.</td></tr>';
+    h+='<p class="note">Anyone can see the public summary (dates and types only). People listed here sign in with an emailed link. <b>Group leads</b> see full details for entries of their group (set up in the Group leads tab) and a summary of everything else. <b>Admins</b> see everything, can add and change entries, and can use this page.</p>';
+    h+='<table><thead><tr><th>Email</th><th>Access</th><th>Group</th><th></th></tr></thead><tbody id="adm-users">';
+    adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td>'+grpSel(u.grp)+'</td><td><button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button></td></tr>'});
+    if(!adm.users.length)h+='<tr><td colspan="4" class="msg">No one added here yet.</td></tr>';
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-user">+ Add person</button><button class="b p" data-a="save-users">Save access</button></div>';
-    h+='<div class="box" style="margin-top:20px"><b style="font-size:13px">Also have access automatically</b><p class="note" style="margin:4px 0 6px">These come from the CD Strategy dashboard\'s admin list and are managed there.</p><table><tbody>'+(adm.auto.length?adm.auto.map(function(a){return '<tr><td>'+esc(a.email)+'</td><td>'+esc(a.role==='admin'?'Admin':'Editor')+'</td><td class="msg">'+esc(a.source)+'</td></tr>'}).join(''):'<tr><td class="msg">None</td></tr>')+'</tbody></table></div>';
+    h+='<div class="box" style="margin-top:20px"><b style="font-size:13px">Also have access automatically</b><p class="note" style="margin:4px 0 6px">These come from the CD Strategy dashboard\'s admin list and are managed there.</p><table><tbody>'+(adm.auto.length?adm.auto.map(function(a){return '<tr><td>'+esc(a.email)+'</td><td>'+esc(a.role==='admin'?'Admin':'Group lead')+'</td><td class="msg">'+esc(a.source)+'</td></tr>'}).join(''):'<tr><td class="msg">None</td></tr>')+'</tbody></table></div>';
+  }
+  if(admTab==='groups'){
+    h+='<p class="note">For each group: which entry types its leads see <b>in full</b> (an entry counts if its main type or any linked type is ticked), and whether they can see the <b>hidden types</b> (marked hidden in the Types tab, such as ASLP Phase 2 and Significant Change Process). Everything else shows to them as a summary.</p>';
+    h+='<table><thead><tr><th style="width:180px">Group name</th><th>Sees full details of</th><th style="width:110px">Hidden types</th><th></th></tr></thead><tbody id="adm-groups">';
+    adm.groups.forEach(function(g,i){h+='<tr data-i="'+i+'"><td><input data-f="name" value="'+esc(g.name)+'"></td><td><div class="lks" style="max-height:110px">'+adm.types.map(function(x){return '<label class="lkc"><input type="checkbox" data-t="'+esc(x.key)+'"'+((g.types||[]).indexOf(x.key)>=0?' checked':'')+'><i class="sw" style="background:'+esc(x.color)+'"></i>'+esc(x.label)+'</label>'}).join('')+'</div></td><td><label class="lkc"><input type="checkbox" data-r="1"'+(g.restricted?' checked':'')+'>Can see</label></td><td><button class="lnk del" data-a="rm-group" data-i="'+i+'">Remove</button></td></tr>'});
+    h+='</tbody></table><div class="bar"><button class="b" data-a="add-group">+ Add group</button><button class="b p" data-a="save-groups">Save groups</button></div>';
   }
   if(admTab==='types'){
-    h+='<p class="note">The types used for entries: name, colour, and which filter row they appear in. Removing a type doesn\'t delete entries — they show as <b>Other</b> until you give them a new type.</p>';
-    h+='<table><thead><tr><th>Colour</th><th>Name</th><th>Row</th><th></th></tr></thead><tbody id="adm-types">';
-    adm.types.forEach(function(x,i){h+='<tr data-i="'+i+'"><td><input data-f="color" type="color" value="'+esc(x.color)+'"></td><td><input data-f="label" value="'+esc(x.label)+'"></td><td><select data-f="group">'+['Groups','Activities','Others'].map(function(g){return '<option'+(g===x.group?' selected':'')+'>'+g+'</option>'}).join('')+'</select></td><td>'+(x.key==='other'?'<span class="msg">always kept</span>':'<button class="lnk del" data-a="rm-type" data-i="'+i+'">Remove</button>')+'</td></tr>'});
+    h+='<p class="note">The types used for entries: name, colour, which filter row they appear in, and whether they are <b>hidden</b> (left out of the public summary and only shown to admins and groups allowed in the Group leads tab). Removing a type doesn\'t delete entries — they show as <b>Other</b> until you give them a new type.</p>';
+    h+='<table><thead><tr><th>Colour</th><th>Name</th><th>Row</th><th>Hidden</th><th></th></tr></thead><tbody id="adm-types">';
+    adm.types.forEach(function(x,i){h+='<tr data-i="'+i+'"><td><input data-f="color" type="color" value="'+esc(x.color)+'"></td><td><input data-f="label" value="'+esc(x.label)+'"></td><td><select data-f="group">'+['Groups','Activities','Others'].map(function(g){return '<option'+(g===x.group?' selected':'')+'>'+g+'</option>'}).join('')+'</select></td><td><label class="lkc"><input type="checkbox" data-f="restricted" value="1"'+(x.restricted?' checked':'')+'>Hide</label></td><td>'+(x.key==='other'?'<span class="msg">always kept</span>':'<button class="lnk del" data-a="rm-type" data-i="'+i+'">Remove</button>')+'</td></tr>'});
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-type">+ Add type</button><button class="b p" data-a="save-types">Save types</button></div>';
   }
   if(admTab==='terr'){
@@ -412,8 +431,9 @@ function renderAdmin(){
   }
   h+='</div>';document.getElementById('adm').innerHTML=h;
 }
-function rows(id){return Array.prototype.map.call(document.querySelectorAll('#'+id+' tr[data-i]'),function(tr){var o={};Array.prototype.forEach.call(tr.querySelectorAll('[data-f]'),function(x){o[x.getAttribute('data-f')]=x.value.trim()});return o})}
-function syncAdm(){if(!adm)return;if(document.getElementById('adm-users'))adm.users=rows('adm-users');if(document.getElementById('adm-types')){var r=rows('adm-types');adm.types=adm.types.map(function(x,i){return {key:x.key,label:r[i]?r[i].label:x.label,color:r[i]?r[i].color:x.color,group:r[i]?r[i].group:x.group}})}if(document.getElementById('adm-terr'))adm.terr=rows('adm-terr')}
+function rows(id){return Array.prototype.map.call(document.querySelectorAll('#'+id+' tr[data-i]'),function(tr){var o={};Array.prototype.forEach.call(tr.querySelectorAll('[data-f]'),function(x){o[x.getAttribute('data-f')]=x.type==='checkbox'?x.checked:x.value.trim()});return o})}
+function syncAdm(){if(!adm)return;if(document.getElementById('adm-users'))adm.users=rows('adm-users');if(document.getElementById('adm-types')){var r=rows('adm-types');adm.types=adm.types.map(function(x,i){return {key:x.key,label:r[i]?r[i].label:x.label,color:r[i]?r[i].color:x.color,group:r[i]?r[i].group:x.group,restricted:r[i]?!!r[i].restricted:!!x.restricted}})}
+  if(document.getElementById('adm-groups')){adm.groups=Array.prototype.map.call(document.querySelectorAll('#adm-groups tr[data-i]'),function(tr,i){var g=adm.groups[i]||{};return {key:g.key||'',name:tr.querySelector('[data-f=name]').value.trim(),types:Array.prototype.filter.call(tr.querySelectorAll('[data-t]'),function(x){return x.checked}).map(function(x){return x.getAttribute('data-t')}),restricted:tr.querySelector('[data-r]').checked}})}if(document.getElementById('adm-terr'))adm.terr=rows('adm-terr')}
 function admSay(m,bad){admMsg=m;admBad=!!bad;var e=document.getElementById('admmsg');if(e){e.textContent=m;e.className='msg'+(bad?' bad':'')}}
 function admSave(rpc,args,ok){admSay('Saving…');sb.rpc(rpc,args).then(function(r){if(r.error)throw r.error;admSay(ok);load(true);sb.rpc('cal_admin_get').then(function(r2){if(r2.data)adm.log=r2.data.log||adm.log})}).catch(function(e){admSay('Not saved: '+errText(e),true)})}
 function slug(s){return (s.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'type').slice(0,24)+'_'+Math.random().toString(36).slice(2,6)}
@@ -423,12 +443,15 @@ document.addEventListener('click',function(ev){
   syncAdm();
   var i=+t.getAttribute('data-i');
   if(a==='tab'){admTab=t.getAttribute('data-tab');admMsg='';renderAdmin();return}
-  if(a==='add-user'){adm.users.push({email:'',role:'viewer'});renderAdmin();var ins=document.querySelectorAll('#adm-users input');if(ins.length)ins[ins.length-1].focus();return}
+  if(a==='add-user'){adm.users.push({email:'',role:'lead',grp:''});renderAdmin();var ins=document.querySelectorAll('#adm-users input');if(ins.length)ins[ins.length-1].focus();return}
   if(a==='rm-user'){adm.users.splice(i,1);renderAdmin();admSay('Removed — click Save access to confirm');return}
-  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(u.email)});if(bad.length){admSay('Check this email: '+bad[0].email,true);return}admSave('cal_admin_set_users',{p_users:us.map(function(u){return {email:u.email.toLowerCase(),role:u.role}})},'Access saved');return}
+  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(u.email)});if(bad.length){admSay('Check this email: '+bad[0].email,true);return}var ng=us.filter(function(u){return u.role==='lead'&&!u.grp});if(ng.length){admSay('Choose a group for '+ng[0].email,true);return}admSave('cal_admin_set_users',{p_users:us.map(function(u){return {email:u.email.toLowerCase(),role:u.role,grp:u.role==='lead'?u.grp:''}})},'Access saved');return}
   if(a==='add-type'){adm.types.push({key:'',label:'',color:'#5c6bc0',group:'Activities'});renderAdmin();var ti=document.querySelectorAll('#adm-types input[data-f=label]');if(ti.length)ti[ti.length-1].focus();return}
   if(a==='rm-type'){adm.types.splice(i,1);renderAdmin();admSay('Removed — click Save types to confirm');return}
   if(a==='save-types'){var ty=adm.types.filter(function(x){return x.label});if(!ty.length){admSay('Add at least one type',true);return}ty.forEach(function(x){if(!x.key)x.key=slug(x.label)});adm.types=ty;admSave('cal_admin_set_setting',{p_key:'types',p_value:ty},'Types saved');return}
+  if(a==='add-group'){adm.groups.push({key:'',name:'',types:[],restricted:false});renderAdmin();return}
+  if(a==='rm-group'){adm.groups.splice(i,1);renderAdmin();admSay('Removed — click Save groups to confirm');return}
+  if(a==='save-groups'){var gs=adm.groups.filter(function(g){return g.name});if(!gs.length){admSay('Add at least one group',true);return}gs.forEach(function(g){if(!g.key)g.key=slug(g.name)});adm.groups=gs;LEADGROUPS=gs;admSave('cal_admin_set_setting',{p_key:'lead_groups',p_value:gs},'Groups saved');return}
   if(a==='add-terr'){adm.terr.push({cl:'',t:'',c:''});renderAdmin();return}
   if(a==='rm-terr'){adm.terr.splice(i,1);renderAdmin();admSay('Removed — click Save territories to confirm');return}
   if(a==='save-terr'){var te=adm.terr.filter(function(x){return x.t&&x.c});if(!te.length){admSay('Add at least one territory with countries',true);return}
@@ -440,10 +463,11 @@ document.addEventListener('click',function(ev){
   var t=ev.target;if(!t)return;
   if(t.id==='darkbtn'){DARK=!DARK;lsSet('aslpDark',DARK?'1':'0');document.documentElement.classList.toggle('dark',DARK);render();return}
   if(t.id==='exportbtn'){download('aslp-calendar-entries.json',JSON.stringify(state,null,1),'application/json');return}
+  if(t.hasAttribute&&t.hasAttribute('data-ysel')){YSEL=t.getAttribute('data-ysel');try{localStorage.setItem('aslpYear',YSEL)}catch(e){}render();return}
   if(t.id==='adminbtn'){openAdmin();return}
   if(t.id==='signinbtn'){openSignin();return}
   if(t.id==='si-go'){sendLink();return}
-  if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false};render()});return}
+  if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};load()});return}
   if(t.id==='f-from-clear'){ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('#f-from input:checked'),function(x){x.checked=false});var fo2=document.getElementById('f-from-other');if(fo2)fo2.value='';return}
   if(t.hasAttribute&&t.hasAttribute('data-fall')){hidden={};if(t.getAttribute('data-fall')==='0')for(var c in CATS)hidden[c]=1;saveF();render();return}
   var cell=t.closest&&t.closest('.c[data-k]');if(cell){openDay(cell.getAttribute('data-k'));return}
@@ -475,7 +499,7 @@ render();
 sb.auth.onAuthStateChange(function(evt){if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
 refreshMe();
 /* pick up other people's changes */
-window.addEventListener('focus',function(){if(me.can_view&&loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});
-setInterval(function(){if(me.can_view&&!document.hidden&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)},120000);
+window.addEventListener('focus',function(){if(loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});
+setInterval(function(){if(!document.hidden&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)},120000);
 })();
 </script></body></html>

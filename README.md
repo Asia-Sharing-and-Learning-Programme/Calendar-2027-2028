@@ -9,13 +9,11 @@ Shared planning calendar for the Asia-Pacific Sharing & Learning Programme (ASLP
 
 ## How it works
 - **Hosting:** GitHub Pages (this repository, `main` branch, root folder).
-- **Data:** Supabase project "ASLP CDS Dashboard" (shared with the CD Strategy dashboard), table `calendar_events`. The website only calls database functions (`cal_get`, `cal_whoami`, `cal_check_email`, `cal_save`); the table is not directly readable or writable.
-- **Private:** the page code is public, but the calendar entries are not. Only people on the ASLP admin list (programme coordinators, CWG leads and other admins, managed in the CD Strategy dashboard) can see them, after signing in with an emailed link. They can then add, edit and delete entries.
-- **Roles:** *viewers* can see the calendar, *editors* can add, change and delete entries, *admins* can also open the **⚙ Admin** page. CD Strategy dashboard coordinators and admins are calendar admins automatically; CWG leads are editors.
-- **Admin page:** manage the calendar's own access list, the entry types (name, colour, filter row), the territory and country lists, and see the activity log of every change.
-- Database: tables `calendar_events`, `cal_users`, `cal_settings`, `cal_log`; functions `cal_get`, `cal_whoami`, `cal_check_email`, `cal_save`, `cal_admin_get`, `cal_admin_set_users`, `cal_admin_set_setting`.
-- No calendar data is stored in this repository.
-- The database is kept awake by the keep-awake workflow in the `cd-strategy` repository.
+- **Data:** Supabase project "ASLP CDS Dashboard" (shared with the CD Strategy dashboard). The website only calls database functions; the tables are not directly readable or writable. No calendar data is stored in this repository.
+- **Public summary (no sign-in):** year tabs (2027, 2028, both) showing which types of activity happen on which days — no titles, notes or places. Hidden types (e.g. ASLP Phase 2, Significant Change Process) are left out.
+- **Group leads (sign in by emailed link):** full details for entries of their group (an entry counts if its main type or a linked type belongs to the group), a summary of everything else. Only groups allowed in the admin settings see hidden types. CWG leads from the CD Strategy dashboard are recognised automatically.
+- **Admins:** see everything, add/edit/delete entries, and use **⚙ Admin** to manage access (admins and group leads), group-lead settings, types (name, colour, filter row, hidden), territories and countries, and the activity log. CD Strategy dashboard coordinators and admins are calendar admins automatically.
+- Database: tables `calendar_events`, `cal_users`, `cal_settings`, `cal_log`; functions `cal_public`, `cal_get`, `cal_whoami`, `cal_check_email`, `cal_save`, `cal_admin_get`, `cal_admin_set_users`, `cal_admin_set_setting`.
 
 The Supabase key in `index.html` is the *publishable* key, which is meant to be public.
 

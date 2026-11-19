@@ -101,17 +101,36 @@ html.dark .ov{background:rgba(0,0,0,.55)}
 html.dark .lk{border-color:#17191c}
 html.dark .ev{box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
 html.dark .err{color:#f87171}
+.adm-ov{position:fixed;inset:0;background:var(--bg);z-index:20;display:none;overflow:auto}
+.adm-ov.on{display:block}
+.adm{max-width:980px;margin:0 auto;padding:18px 18px 40px}
+.adm-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.adm-top h2{margin:0;font-size:18px}
+.adm-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.adm-tabs button{background:none;border:none;border-bottom:2px solid transparent;padding:8px 12px;font:inherit;font-size:13px;color:var(--muted);cursor:pointer}
+.adm-tabs button.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:650}
+.adm table{width:100%;border-collapse:collapse;font-size:13px}
+.adm th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:6px;border-bottom:1px solid var(--line)}
+.adm td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+.adm td input,.adm td select{font-size:13px;padding:5px 7px}
+.adm td input[type=color]{width:44px;height:30px;padding:2px}
+.adm .note{font-size:12px;color:var(--muted);margin:6px 0 12px;line-height:1.45}
+.adm .box{background:var(--head);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:14px}
+.adm .bar{display:flex;gap:8px;align-items:center;margin-top:12px}
+.adm .msg{font-size:12px;color:var(--muted)}
+.adm .msg.bad{color:#b91c1c}
+html.dark .adm-ov{background:var(--bg)}
 </style>
-</head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+</head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
 <script id="app">
 (function(){
 var YEARS=[2027,2028];
 var LOGO_LIGHT='aslp-logo-light.png',LOGO_DARK='aslp-logo-dark.png';
 var SUPABASE_URL='https://emvtqqjiirgcgghcaeps.supabase.co',SUPABASE_KEY='sb_publishable_cHpOvFlPWmirE_426PPIbg_XYo-klC9';
 var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{flowType:'implicit',persistSession:true,detectSessionInUrl:true,autoRefreshToken:true,storageKey:'aslp-calendar-auth'}});
-var CATS={deadline:{label:'Annual report / deadline',color:'#c62828'},apsg:{label:'APSG',color:'#9e9d24'},asc:{label:'ASC',color:'#1f4fd6'},aslf:{label:'ASLF',color:'#880e4f'},aslf_tf:{label:'ASLF Task Force',color:'#546e7a'},phase2:{label:'ASLP Phase 2',color:'#0b1f5c'},capdev:{label:'Capacity Development',color:'#d4e157'},cop:{label:'COP',color:'#90caf9'},cwg_sa1:{label:'CWG – SASIA 1',color:'#00acc1'},cwg_sa2:{label:'CWG – SASIA 2',color:'#2e7d32'},cwg_spea1:{label:'CWG – SPEA 1',color:'#7b2cbf'},cwg_spea2:{label:'CWG – SPEA 2',color:'#f06292'},fcg:{label:'FCG',color:'#795548'},ihq:{label:'IHQ Boards',color:'#b39ddb'},na:{label:'Not Available',color:'#111111'},p2p:{label:'P2P visit',color:'#ff6d00'},quarterly:{label:'Quarterly report / deadline',color:'#ffab91'},scp:{label:'Significant Change Process',color:'#d500f9'},sog:{label:'SOG',color:'#f2c200'},other:{label:'Other',color:'#9e9e9e'}};
-var GROUPS=[['Groups',['apsg','asc','aslf_tf','cwg_sa1','cwg_sa2','cwg_spea1','cwg_spea2','fcg','sog']],['Activities',['aslf','phase2','capdev','cop','p2p','scp']],['Others',['deadline','quarterly','ihq','na','other']]];
-var COUNTRIES=[
+var DEFAULT_CATS={deadline:{label:'Annual report / deadline',color:'#c62828'},apsg:{label:'APSG',color:'#9e9d24'},asc:{label:'ASC',color:'#1f4fd6'},aslf:{label:'ASLF',color:'#880e4f'},aslf_tf:{label:'ASLF Task Force',color:'#546e7a'},phase2:{label:'ASLP Phase 2',color:'#0b1f5c'},capdev:{label:'Capacity Development',color:'#d4e157'},cop:{label:'COP',color:'#90caf9'},cwg_sa1:{label:'CWG – SASIA 1',color:'#00acc1'},cwg_sa2:{label:'CWG – SASIA 2',color:'#2e7d32'},cwg_spea1:{label:'CWG – SPEA 1',color:'#7b2cbf'},cwg_spea2:{label:'CWG – SPEA 2',color:'#f06292'},fcg:{label:'FCG',color:'#795548'},ihq:{label:'IHQ Boards',color:'#b39ddb'},na:{label:'Not Available',color:'#111111'},p2p:{label:'P2P visit',color:'#ff6d00'},quarterly:{label:'Quarterly report / deadline',color:'#ffab91'},scp:{label:'Significant Change Process',color:'#d500f9'},sog:{label:'SOG',color:'#f2c200'},other:{label:'Other',color:'#9e9e9e'}};
+var DEFAULT_GROUPS=[['Groups',['apsg','asc','aslf_tf','cwg_sa1','cwg_sa2','cwg_spea1','cwg_spea2','fcg','sog']],['Activities',['aslf','phase2','capdev','cop','p2p','scp']],['Others',['deadline','quarterly','ihq','na','other']]];
+var DEFAULT_COUNTRIES=[
 ['SASIA 1 · India National Secretariat',['India National Office']],
 ['SASIA 1 · India Central Territory',['India Central']],
 ['SASIA 1 · India Eastern Territory',['India Eastern','Nepal']],
@@ -134,12 +153,19 @@ var COUNTRIES=[
 ['SPEA 2 · Papua New Guinea and Solomon Islands Territory',['Papua New Guinea','Solomon Islands']],
 ['SPEA 2 · Australia Territory',['Australia']],
 ['SPEA 2 · New Zealand, Fiji, Tonga and Samoa Territory',['New Zealand','Fiji Islands','Tonga','Samoa']]];
+var CATS=DEFAULT_CATS,GROUPS=DEFAULT_GROUPS,COUNTRIES=DEFAULT_COUNTRIES;
+function typesFromCurrent(){var gOf={};GROUPS.forEach(function(g){g[1].forEach(function(k){gOf[k]=g[0]})});return Object.keys(CATS).map(function(k){return {key:k,label:CATS[k].label,color:CATS[k].color,group:gOf[k]||'Others'}})}
+function applySettings(s){
+  if(Array.isArray(s.types)&&s.types.length){var c={},g={Groups:[],Activities:[],Others:[]};s.types.forEach(function(x){if(!x||!x.key)return;c[x.key]={label:x.label||x.key,color:x.color||'#9e9e9e'};(g[x.group]||g.Others).push(x.key)});if(!c.other)c.other={label:'Other',color:'#9e9e9e'};CATS=c;GROUPS=[['Groups',g.Groups],['Activities',g.Activities],['Others',g.Others]]}
+  else{CATS=DEFAULT_CATS;GROUPS=DEFAULT_GROUPS}
+  COUNTRIES=(Array.isArray(s.countries)&&s.countries.length)?s.countries:DEFAULT_COUNTRIES;
+}
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['M','T','W','T','F','S','S'];
 /* ---------- storage ---------- */
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}
-var state={events:[]},synced={},loaded=false,me={email:'',can_edit:false},saving=false;
+var state={events:[]},synced={},loaded=false,me={email:'',can_view:false,can_edit:false,is_admin:false},saving=false;
 var statusText='',curKey=null,editId=null;
 var DARK=lsGet('aslpDark')==='1';document.documentElement.classList.toggle('dark',DARK);
 var hidden={};try{hidden=JSON.parse(lsGet('aslpHidden')||'{}')||{}}catch(e){hidden={}}
@@ -191,14 +217,14 @@ function aslfVal(){var w=document.getElementById('f-aslf');if(!w||w.style.displa
 /* ---------- render ---------- */
 function render(){
   var h='<div class="wrap"><header><div class="brand"><img class="logo" src="'+(DARK?LOGO_DARK:LOGO_LIGHT)+'" alt="ASLP – Asia-Pacific Sharing & Learning Programme"><h1>Calendar 2027–2028</h1></div><div class="legend">';
-  if(me.can_edit)grouped().forEach(function(g){h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
-  if(me.can_edit)h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
+  if(me.can_view)grouped().forEach(function(g){h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
+  if(me.can_view)h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
   h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn" id="darkbtn">'+(DARK?'☀ Light mode':'☾ Dark mode')+'</button></div>';
-  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.can_edit?'':' (view only)')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn">Sign in</button>')+'</div>';
-  if(me.can_edit)h+='<div class="rtop"><button class="fbtn" id="exportbtn">⬇ Download entries</button></div>';
+  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.can_edit?'':' (view only)')+(me.is_admin?' · admin':'')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn">Sign in</button>')+'</div>';
+  if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">⚙ Admin</button>':'')+'<button class="fbtn" id="exportbtn">⬇ Download entries</button></div>';
   h+='</div></header>';
-  if(me.can_edit)h+='<p class="hint">'+(me.can_edit?'Click any day to add an entry. ':'')+'Use the tick boxes above to filter: an entry shows if its type or any of its linked types is ticked.</p>';
-  if(!me.can_edit){h+='<div class="loading">'+(me.email?'<b>'+esc(me.email)+'</b> is not on the list of approved ASLP users, so the calendar can\'t be shown.<br>Ask a programme coordinator to add your email, or sign out and use another email.':'This calendar is private to the ASLP team.<br>Sign in with your approved ASLP email to view and edit it.<br><br><button class="b p" id="signinbtn">Sign in</button>')+'</div></div>';document.getElementById('root').innerHTML=h;return}
+  if(me.can_view)h+='<p class="hint">'+(me.can_edit?'Click any day to add an entry. ':'Click any day to see its details (you have view-only access). ')+'Use the tick boxes above to filter: an entry shows if its type or any of its linked types is ticked.</p>';
+  if(!me.can_view){h+='<div class="loading">'+(me.email?'<b>'+esc(me.email)+'</b> is not on the list of approved ASLP users, so the calendar can\'t be shown.<br>Ask a programme coordinator to add your email, or sign out and use another email.':'This calendar is private to the ASLP team.<br>Sign in with your approved ASLP email to view and edit it.<br><br><button class="b p" id="signinbtn">Sign in</button>')+'</div></div>';document.getElementById('root').innerHTML=h;return}
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
   h+='<div class="grid"><div class="h" style="grid-column:span 2"></div>';
   for(var w=0;w<6;w++)h+='<div class="h wk" style="grid-column:span '+(w<5?7:2)+'">'+(w<5?'Week ':'Wk ')+(w+1)+'</div>';
@@ -247,7 +273,7 @@ function drawModal(f){
   evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(e.title)+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(me.can_edit?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
   if(!me.can_edit){
     if(!evs.length)h+='<p class="sub">Nothing planned on this day.</p>';
-    h+='<p class="sub" style="margin-top:12px">'+(me.email?'Your email is not on the list of approved ASLP editors, so you can only view the calendar.':'To add or change entries, sign in with your approved ASLP email.')+'</p>';
+    h+='<p class="sub" style="margin-top:12px">You have view-only access. Ask an admin if you need to add or change entries.</p>';
     h+='<div class="btns">'+(me.email?'':'<button class="b" id="signinbtn">Sign in</button>')+'<button class="b p" id="f-cancel">Close</button></div>';
     document.getElementById('modal').innerHTML=h;return;
   }
@@ -300,7 +326,7 @@ function load(quiet){
   if(!quiet)setStatus('Loading…');
   return sb.rpc('cal_get').then(function(r){
     if(r.error)throw r.error;
-    var evs=(r.data||[]).map(clean);
+    var d=r.data||{};applySettings(d.settings||{});var evs=(d.events||[]).map(clean);
     state={events:evs};synced={};evs.forEach(function(e){synced[e.id]=sig(e)});loaded=true;
     if(!quiet&&!saving)setStatus('Up to date');
     if(!document.getElementById('ov').classList.contains('on'))render();
@@ -323,7 +349,7 @@ function persist(){
 }
 /* who is signed in */
 function refreshMe(){
-  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',can_edit:!!d.can_edit};if(me.can_edit){setStatus(loaded?statusText:'Loading…');render();return load()}loaded=false;state={events:[]};synced={};setStatus('');render()}).catch(function(){me={email:'',can_edit:false};render()});
+  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin};if(me.can_view){setStatus(loaded?statusText:'Loading…');render();return load()}loaded=false;state={events:[]};synced={};setStatus('');render()}).catch(function(){me={email:'',can_edit:false};render()});
 }
 function openSignin(){
   curKey=null;editId=null;
@@ -345,14 +371,79 @@ function sendLink(){
   }).catch(function(e){go.disabled=false;err.textContent='Could not send the link: '+errText(e)});
 }
 
+
+/* ---------- admin ---------- */
+var adm=null,admTab='access',admMsg='',admBad=false;
+function openAdmin(){document.getElementById('adm').classList.add('on');document.getElementById('adm').innerHTML='<div class="adm"><div class="loading">Loading admin settings…</div></div>';
+  sb.rpc('cal_admin_get').then(function(r){if(r.error)throw r.error;var d=r.data||{};
+    applySettings(d.settings||{});
+    adm={users:(d.users||[]).map(function(u){return {email:u.email,role:u.role}}),auto:d.auto||[],log:d.log||[],
+      types:typesFromCurrent(),terr:COUNTRIES.map(function(g){return {cl:clName(g[0]),t:tName(g[0]),c:g[1].join(', ')}})};
+    admMsg='';renderAdmin()}).catch(function(e){document.getElementById('adm').innerHTML='<div class="adm"><p class="msg bad">Could not open admin: '+esc(errText(e))+'</p><button class="b" data-a="close">Close</button></div>'})}
+function closeAdmin(){document.getElementById('adm').classList.remove('on');render()}
+function roleSel(v){return '<select data-f="role">'+['viewer','editor','admin'].map(function(r){return '<option value="'+r+'"'+(r===v?' selected':'')+'>'+{viewer:'Viewer – can see',editor:'Editor – can add and change',admin:'Admin – can also manage settings'}[r]+'</option>'}).join('')+'</select>'}
+function renderAdmin(){
+  var h='<div class="adm"><div class="adm-top"><h2>⚙ Calendar admin</h2><span class="msg'+(admBad?' bad':'')+'" id="admmsg">'+esc(admMsg)+'</span><span style="margin-left:auto"></span><button class="b" data-a="close">Back to calendar</button></div>';
+  h+='<div class="adm-tabs">'+[['access','Access'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  if(admTab==='access'){
+    h+='<p class="note">Who can open the calendar. <b>Viewers</b> can see it, <b>editors</b> can also add, change and delete entries, and <b>admins</b> can also use this page. Everyone signs in with an emailed link.</p>';
+    h+='<table><thead><tr><th>Email</th><th>Access</th><th></th></tr></thead><tbody id="adm-users">';
+    adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td><button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button></td></tr>'});
+    if(!adm.users.length)h+='<tr><td colspan="3" class="msg">No one added here yet.</td></tr>';
+    h+='</tbody></table><div class="bar"><button class="b" data-a="add-user">+ Add person</button><button class="b p" data-a="save-users">Save access</button></div>';
+    h+='<div class="box" style="margin-top:20px"><b style="font-size:13px">Also have access automatically</b><p class="note" style="margin:4px 0 6px">These come from the CD Strategy dashboard\'s admin list and are managed there.</p><table><tbody>'+(adm.auto.length?adm.auto.map(function(a){return '<tr><td>'+esc(a.email)+'</td><td>'+esc(a.role==='admin'?'Admin':'Editor')+'</td><td class="msg">'+esc(a.source)+'</td></tr>'}).join(''):'<tr><td class="msg">None</td></tr>')+'</tbody></table></div>';
+  }
+  if(admTab==='types'){
+    h+='<p class="note">The types used for entries: name, colour, and which filter row they appear in. Removing a type doesn\'t delete entries — they show as <b>Other</b> until you give them a new type.</p>';
+    h+='<table><thead><tr><th>Colour</th><th>Name</th><th>Row</th><th></th></tr></thead><tbody id="adm-types">';
+    adm.types.forEach(function(x,i){h+='<tr data-i="'+i+'"><td><input data-f="color" type="color" value="'+esc(x.color)+'"></td><td><input data-f="label" value="'+esc(x.label)+'"></td><td><select data-f="group">'+['Groups','Activities','Others'].map(function(g){return '<option'+(g===x.group?' selected':'')+'>'+g+'</option>'}).join('')+'</select></td><td>'+(x.key==='other'?'<span class="msg">always kept</span>':'<button class="lnk del" data-a="rm-type" data-i="'+i+'">Remove</button>')+'</td></tr>'});
+    h+='</tbody></table><div class="bar"><button class="b" data-a="add-type">+ Add type</button><button class="b p" data-a="save-types">Save types</button></div>';
+  }
+  if(admTab==='terr'){
+    h+='<p class="note">The lists used for P2P visits, Capacity Development and ASLF (host territory and country). One row per territory; separate countries with commas.</p>';
+    h+='<table><thead><tr><th style="width:110px">Cluster</th><th>Territory</th><th>Countries</th><th></th></tr></thead><tbody id="adm-terr">';
+    adm.terr.forEach(function(x,i){h+='<tr data-i="'+i+'"><td><input data-f="cl" value="'+esc(x.cl)+'" placeholder="SPEA 1"></td><td><input data-f="t" value="'+esc(x.t)+'"></td><td><input data-f="c" value="'+esc(x.c)+'"></td><td><button class="lnk del" data-a="rm-terr" data-i="'+i+'">Remove</button></td></tr>'});
+    h+='</tbody></table><div class="bar"><button class="b" data-a="add-terr">+ Add territory</button><button class="b p" data-a="save-terr">Save territories</button></div>';
+  }
+  if(admTab==='log'){
+    h+='<p class="note">The latest 300 changes to the calendar and its settings.</p><table><thead><tr><th style="width:150px">When</th><th>Who</th><th>What</th></tr></thead><tbody>';
+    h+=adm.log.length?adm.log.map(function(l){var d=new Date(l.at);return '<tr><td>'+esc(d.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(l.email)+'</td><td><b>'+esc(l.action)+'</b> '+esc(l.detail)+'</td></tr>'}).join(''):'<tr><td colspan="3" class="msg">No changes recorded yet.</td></tr>';
+    h+='</tbody></table><div class="bar"><button class="b" data-a="reload-log">Refresh</button></div>';
+  }
+  h+='</div>';document.getElementById('adm').innerHTML=h;
+}
+function rows(id){return Array.prototype.map.call(document.querySelectorAll('#'+id+' tr[data-i]'),function(tr){var o={};Array.prototype.forEach.call(tr.querySelectorAll('[data-f]'),function(x){o[x.getAttribute('data-f')]=x.value.trim()});return o})}
+function syncAdm(){if(!adm)return;if(document.getElementById('adm-users'))adm.users=rows('adm-users');if(document.getElementById('adm-types')){var r=rows('adm-types');adm.types=adm.types.map(function(x,i){return {key:x.key,label:r[i]?r[i].label:x.label,color:r[i]?r[i].color:x.color,group:r[i]?r[i].group:x.group}})}if(document.getElementById('adm-terr'))adm.terr=rows('adm-terr')}
+function admSay(m,bad){admMsg=m;admBad=!!bad;var e=document.getElementById('admmsg');if(e){e.textContent=m;e.className='msg'+(bad?' bad':'')}}
+function admSave(rpc,args,ok){admSay('Saving…');sb.rpc(rpc,args).then(function(r){if(r.error)throw r.error;admSay(ok);load(true);sb.rpc('cal_admin_get').then(function(r2){if(r2.data)adm.log=r2.data.log||adm.log})}).catch(function(e){admSay('Not saved: '+errText(e),true)})}
+function slug(s){return (s.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')||'type').slice(0,24)+'_'+Math.random().toString(36).slice(2,6)}
+document.addEventListener('click',function(ev){
+  var t=ev.target;if(!t||!t.closest||!t.closest('#adm'))return;var a=t.getAttribute('data-a');if(!a)return;
+  if(a==='close'){closeAdmin();return}
+  syncAdm();
+  var i=+t.getAttribute('data-i');
+  if(a==='tab'){admTab=t.getAttribute('data-tab');admMsg='';renderAdmin();return}
+  if(a==='add-user'){adm.users.push({email:'',role:'viewer'});renderAdmin();var ins=document.querySelectorAll('#adm-users input');if(ins.length)ins[ins.length-1].focus();return}
+  if(a==='rm-user'){adm.users.splice(i,1);renderAdmin();admSay('Removed — click Save access to confirm');return}
+  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(u.email)});if(bad.length){admSay('Check this email: '+bad[0].email,true);return}admSave('cal_admin_set_users',{p_users:us.map(function(u){return {email:u.email.toLowerCase(),role:u.role}})},'Access saved');return}
+  if(a==='add-type'){adm.types.push({key:'',label:'',color:'#5c6bc0',group:'Activities'});renderAdmin();var ti=document.querySelectorAll('#adm-types input[data-f=label]');if(ti.length)ti[ti.length-1].focus();return}
+  if(a==='rm-type'){adm.types.splice(i,1);renderAdmin();admSay('Removed — click Save types to confirm');return}
+  if(a==='save-types'){var ty=adm.types.filter(function(x){return x.label});if(!ty.length){admSay('Add at least one type',true);return}ty.forEach(function(x){if(!x.key)x.key=slug(x.label)});adm.types=ty;admSave('cal_admin_set_setting',{p_key:'types',p_value:ty},'Types saved');return}
+  if(a==='add-terr'){adm.terr.push({cl:'',t:'',c:''});renderAdmin();return}
+  if(a==='rm-terr'){adm.terr.splice(i,1);renderAdmin();admSay('Removed — click Save territories to confirm');return}
+  if(a==='save-terr'){var te=adm.terr.filter(function(x){return x.t&&x.c});if(!te.length){admSay('Add at least one territory with countries',true);return}
+    var val=te.map(function(x){return [(x.cl?x.cl+' · ':'')+x.t,x.c.split(',').map(function(s){return s.trim()}).filter(Boolean)]});admSave('cal_admin_set_setting',{p_key:'countries',p_value:val},'Territories saved');return}
+  if(a==='reload-log'){openAdmin();return}
+});
 /* ---------- events ---------- */
 document.addEventListener('click',function(ev){
   var t=ev.target;if(!t)return;
   if(t.id==='darkbtn'){DARK=!DARK;lsSet('aslpDark',DARK?'1':'0');document.documentElement.classList.toggle('dark',DARK);render();return}
   if(t.id==='exportbtn'){download('aslp-calendar-entries.json',JSON.stringify(state,null,1),'application/json');return}
+  if(t.id==='adminbtn'){openAdmin();return}
   if(t.id==='signinbtn'){openSignin();return}
   if(t.id==='si-go'){sendLink();return}
-  if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_edit:false};render()});return}
+  if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false};render()});return}
   if(t.id==='f-from-clear'){ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('#f-from input:checked'),function(x){x.checked=false});var fo2=document.getElementById('f-from-other');if(fo2)fo2.value='';return}
   if(t.hasAttribute&&t.hasAttribute('data-fall')){hidden={};if(t.getAttribute('data-fall')==='0')for(var c in CATS)hidden[c]=1;saveF();render();return}
   var cell=t.closest&&t.closest('.c[data-k]');if(cell){openDay(cell.getAttribute('data-k'));return}
@@ -384,7 +475,7 @@ render();
 sb.auth.onAuthStateChange(function(evt){if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
 refreshMe();
 /* pick up other people's changes */
-window.addEventListener('focus',function(){if(me.can_edit&&loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});
-setInterval(function(){if(me.can_edit&&!document.hidden&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)},120000);
+window.addEventListener('focus',function(){if(me.can_view&&loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});
+setInterval(function(){if(me.can_view&&!document.hidden&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)},120000);
 })();
 </script></body></html>

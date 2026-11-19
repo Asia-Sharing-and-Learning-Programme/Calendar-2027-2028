@@ -11,6 +11,9 @@ Shared planning calendar for the Asia-Pacific Sharing & Learning Programme (ASLP
 - **Hosting:** GitHub Pages (this repository, `main` branch, root folder).
 - **Data:** Supabase project "ASLP CDS Dashboard" (shared with the CD Strategy dashboard), table `calendar_events`. The website only calls database functions (`cal_get`, `cal_whoami`, `cal_check_email`, `cal_save`); the table is not directly readable or writable.
 - **Private:** the page code is public, but the calendar entries are not. Only people on the ASLP admin list (programme coordinators, CWG leads and other admins, managed in the CD Strategy dashboard) can see them, after signing in with an emailed link. They can then add, edit and delete entries.
+- **Roles:** *viewers* can see the calendar, *editors* can add, change and delete entries, *admins* can also open the **⚙ Admin** page. CD Strategy dashboard coordinators and admins are calendar admins automatically; CWG leads are editors.
+- **Admin page:** manage the calendar's own access list, the entry types (name, colour, filter row), the territory and country lists, and see the activity log of every change.
+- Database: tables `calendar_events`, `cal_users`, `cal_settings`, `cal_log`; functions `cal_get`, `cal_whoami`, `cal_check_email`, `cal_save`, `cal_admin_get`, `cal_admin_set_users`, `cal_admin_set_setting`.
 - No calendar data is stored in this repository.
 - The database is kept awake by the keep-awake workflow in the `cd-strategy` repository.
 

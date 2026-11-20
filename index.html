@@ -614,6 +614,18 @@ function openSignin(){
   sb.rpc('signin_status_for',{p_email:''}).then(function(r){if(r.data&&r.data.limit){signinLimitN=r.data.limit;var b2=document.getElementById('si-limit');if(b2&&!signinStatus)b2.innerHTML=limitBox(null)}}).catch(function(){});
   var ie=document.getElementById('si-email');if(ie)ie.addEventListener('input',function(){clearTimeout(signinCheckT);var er=document.getElementById('si-err');if(er)er.textContent='';signinCheckT=setTimeout(checkMyLimit,450)});
 }
+/* sign-in that survives email link scanners (e.g. Microsoft 365 Safe Links): a code, or a link that needs a click */
+var codeEmail='',pendingHash=null,pendingType='email';
+function signInWithCode(){
+  var tok=((document.getElementById('si-code')||{}).value||'').replace(/\s+/g,''),err=document.getElementById('si-err'),go=document.getElementById('si-code-go');
+  if(!/^\d{6,10}$/.test(tok)){err.textContent='Type the code from the email (numbers only).';return}
+  go.disabled=true;err.textContent='';
+  sb.auth.verifyOtp({email:codeEmail,token:tok,type:'email'}).then(function(r){go.disabled=false;if(r.error)throw r.error;closeModal();refreshMe()}).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/expired|invalid/i.test(m)?'That code didn\'t work. It may have expired or already been used. Check you typed the newest one, or request a new link.':'Could not sign in: '+m});
+}
+function finishLink(){
+  var err=document.getElementById('fin-err'),go=document.getElementById('fin-go');go.disabled=true;err.textContent='';
+  sb.auth.verifyOtp({token_hash:pendingHash,type:(pendingType==='signup'||pendingType==='magiclink')?'email':pendingType}).then(function(r){if(r.error)throw r.error;pendingHash=null;closeModal();refreshMe()}).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/expired|invalid|not found/i.test(m)?'This sign-in link has expired or was already used. Close this and click Sign in to get a new one.':'Could not finish signing in: '+m});
+}
 function sendLink(){
   var em=(document.getElementById('si-email').value||'').trim().toLowerCase(),err=document.getElementById('si-err'),go=document.getElementById('si-go');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err.textContent='Enter a valid email address.';return}
@@ -627,7 +639,8 @@ function sendLink(){
     }
     return sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
       if(r2.error)throw r2.error;
-      document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in link to <b>'+esc(em)+'</b>. Open it on this device to see the calendar with your access.</p></div>'+limitBox(d)+'<div class="btns"><button class="b p" id="f-cancel">OK</button></div>';
+      codeEmail=em;
+      document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in email to <b>'+esc(em)+'</b>. Either click its link and then <b>Finish signing in</b>, or type its code below.</p></div><input id="si-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code from the email" style="letter-spacing:3px"><div class="err" id="si-err"></div>'+limitBox(d)+'<div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-code-go">Sign in with code</button></div>';
     });
   }).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/rate limit|too many/i.test(m)?'Too many sign-in emails were sent in the last hour (this limit is shared with the CD Strategy dashboard). Please try again later.':'Could not send the link: '+m});
 }
@@ -742,6 +755,8 @@ document.addEventListener('click',function(ev){
   if(t.id==='adminbtn'){openAdmin();return}
   if(t.id==='signinbtn'){openSignin();return}
   if(t.id==='si-go'){sendLink();return}
+  if(t.id==='si-code-go'){signInWithCode();return}
+  if(t.id==='fin-go'){finishLink();return}
   if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};load()});return}
   if(t.id==='f-from-clear'){ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('#f-from input:checked'),function(x){x.checked=false});var fo2=document.getElementById('f-from-other');if(fo2)fo2.value='';return}
   if(t.hasAttribute&&t.hasAttribute('data-fall')){hidden={};if(t.getAttribute('data-fall')==='0')for(var c in CATS)hidden[c]=1;saveF();render();return}
@@ -768,10 +783,14 @@ document.addEventListener('change',function(ev){
 });
 document.addEventListener('keydown',function(ev){
   if(ev.key==='Escape')closeModal();
-  if(ev.key==='Enter'&&document.getElementById('ov')&&document.getElementById('ov').classList.contains('on')&&ev.target.tagName==='INPUT'){ev.preventDefault();if(ev.target.id==='si-email')sendLink();else if(document.getElementById('f-save'))save()}
+  if(ev.key==='Enter'&&document.getElementById('ov')&&document.getElementById('ov').classList.contains('on')&&ev.target.tagName==='INPUT'){ev.preventDefault();if(ev.target.id==='si-email')sendLink();else if(ev.target.id==='si-code')signInWithCode();else if(document.getElementById('f-save'))save()}
 });
 
 render();
+(function(){var q=new URLSearchParams(location.search),h=q.get('token_hash');if(!h)return;pendingHash=h;pendingType=q.get('type')||'email';
+  history.replaceState(null,'',location.pathname+location.hash);
+  document.getElementById('modal').innerHTML='<h3>Finish signing in</h3><div class="signin"><p>Click the button below to finish signing in on this device.</p></div><div class="err" id="fin-err"></div><div class="btns"><button class="b" id="f-cancel">Cancel</button><button class="b signin-btn" id="fin-go">Finish signing in</button></div>';
+  document.getElementById('ov').classList.add('on');})();
 sb.auth.onAuthStateChange(function(evt,session){if(evt==='SIGNED_IN'&&session){var key='aslpSignedIn:'+(session.user&&session.user.id);try{if(!sessionStorage.getItem(key)){sessionStorage.setItem(key,'1');sb.rpc('cal_record_signin').then(function(){},function(){})}}catch(e){}}if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
 refreshMe();
 /* pick up other people's changes */

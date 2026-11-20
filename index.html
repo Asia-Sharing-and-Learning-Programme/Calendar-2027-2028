@@ -526,7 +526,7 @@ var adm=null,admTab='access',admMsg='',admBad=false;
 function openAdmin(){document.getElementById('adm').classList.add('on');document.getElementById('adm').innerHTML='<div class="adm"><div class="loading">Loading admin settings…</div></div>';
   sb.rpc('cal_admin_get').then(function(r){if(r.error)throw r.error;var d=r.data||{};
     applySettings(d.settings||{});
-    adm={users:(d.users||[]).map(function(u){return {email:u.email,role:u.role,grp:u.grp||''}}),auto:d.auto||[],log:d.log||[],
+    adm={me:d.me||me.email,users:(d.users||[]).map(function(u){return {email:u.email,role:u.role,grp:u.grp||''}}),auto:d.auto||[],log:d.log||[],
       types:typesFromCurrent(),groups:JSON.parse(JSON.stringify(LEADGROUPS)),terr:COUNTRIES.map(function(g){return {cl:clName(g[0]),t:tName(g[0]),c:g[1].join(', ')}})};
     admMsg='';renderAdmin();loadSignins()}).catch(function(e){document.getElementById('adm').innerHTML='<div class="adm"><p class="msg bad">Could not open admin: '+esc(errText(e))+'</p><button class="b" data-a="close">Close</button></div>'})}
 function closeAdmin(){document.getElementById('adm').classList.remove('on');render()}
@@ -538,10 +538,10 @@ function renderAdmin(){
   if(admTab==='access'){
     h+='<p class="note">Anyone can see the public summary (dates and types only). People listed here sign in with an emailed link. <b>Group members</b> see full details for entries of their group (set up in the Groups tab) and a summary of everything else. <b>Group leads</b> see the same, plus the hidden types if their group is allowed. <b>Admins</b> see everything, can add and change entries, and can use this page.</p>';
     h+='<table><thead><tr><th>Email</th><th>Usage rights</th><th>Group</th><th></th></tr></thead><tbody id="adm-users">';
-    adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td>'+grpSel(u.grp)+'</td><td><button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button></td></tr>'});
+    adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td>'+grpSel(u.grp)+'</td><td>'+(u.email===adm.me?'<span class="msg">you</span>':'<button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button>')+'</td></tr>'});
     if(!adm.users.length)h+='<tr><td colspan="4" class="msg">No one added here yet.</td></tr>';
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-user">+ Add person</button><button class="b p" data-a="save-users">Save access</button></div>';
-    h+='<div class="box" style="margin-top:20px"><b style="font-size:13px">Also have access automatically</b><p class="note" style="margin:4px 0 6px">These come from the CD Strategy dashboard\'s admin list and are managed there.</p><table><tbody>'+(adm.auto.length?adm.auto.map(function(a){return '<tr><td>'+esc(a.email)+'</td><td>'+esc(a.role==='admin'?'Admin':a.role==='member'?'Group member':'Group lead')+'</td><td class="msg">'+esc(a.source)+'</td></tr>'}).join(''):'<tr><td class="msg">None</td></tr>')+'</tbody></table></div>';
+    h+='<p class="note" style="margin-top:14px">This list is the calendar\'s own: changes here don\'t affect the CD Strategy dashboard. You can\'t remove your own admin rights — ask another admin.</p>';
   }
   if(admTab==='groups'){
     h+='<p class="note">For each group: which entry types its leads see <b>in full</b> (an entry counts if its main type or any linked type is ticked), and whether its <b>leads</b> (not members) can see the <b>hidden types</b> (marked hidden in the Types tab, such as ASLP Phase 2 and Significant Change Process). Everything else shows to them as a summary.</p>';

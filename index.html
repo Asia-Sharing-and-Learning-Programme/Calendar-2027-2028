@@ -294,6 +294,28 @@ function nthWd(k,n){var d=toD(k),wd=d.getDay(),nth=Math.floor((d.getDate()-1)/7)
 function occurrences(s,rep,until){var out=[],i=0,k=s;while(k<=until&&out.length<300){out.push(k);i++;if(rep==='w1')k=addDays(s,7*i);else if(rep==='w2')k=addDays(s,14*i);else if(rep==='m1')k=monthAdd(s,i);else if(rep==='m2')k=monthAdd(s,2*i);else if(rep==='m3')k=monthAdd(s,3*i);else if(rep==='m6')k=monthAdd(s,6*i);else if(rep==='y1')k=monthAdd(s,12*i);else if(rep==='mn')k=nthWd(s,i);else break}return out}
 function workday(k){var w=toD(k).getDay();if(w!==6&&w!==0)return k;var m=addDays(k,w===6?2:1);return m>'2028-12-31'?addDays(k,w===6?-1:-2):m}
 function wkLabel(k){var p=k.split('-').map(Number);var off=(new Date(p[0],p[1]-1,1).getDay()+6)%7;return 'Week '+(Math.floor((off+p[2]-1)/7)+1)+' of '+MONTHS[p[1]-1]}
+/* meeting / activity details for group entries */
+function isGroupCat(c){return GROUPS[0]&&GROUPS[0][1].indexOf(c)>=0}
+function actCats(){return ((GROUPS[1]||['',[]])[1]).filter(function(k){return CATS[k]})}
+function placeTxt(e){if(e.kind==='online')return 'Online meeting';if(e.kind==='inperson'){var w=[e.venue,e.city,e.pcountry].filter(Boolean).join(', ');return 'In person'+(w?': '+w:'')}if(e.kind==='activity')return 'Activity'+(e.act&&CATS[e.act]?': '+CATS[e.act].label:'');return ''}
+function kindRow(f){
+  var show=isGroupCat(f.cat),k=f.kind||(show?'online':''),acts=actCats();
+  var h='<div id="f-kindrow" style="display:'+(show?'block':'none')+'"><label>What is it?</label><select id="f-kind"><option value="online"'+(k==='online'?' selected':'')+'>Online meeting (usually repeats)</option><option value="inperson"'+(k==='inperson'?' selected':'')+'>In-person meeting</option><option value="activity"'+(k==='activity'?' selected':'')+'>Group activity</option></select>';
+  h+='<div id="f-actrow" style="display:'+(k==='activity'?'block':'none')+'"><label>Kind of activity</label><select id="f-act"><option value="">— Select —</option>';
+  acts.forEach(function(a){h+='<option value="'+a+'"'+(f.act===a?' selected':'')+'>'+esc(CATS[a].label)+'</option>'});
+  h+='</select></div>';
+  var all=[];COUNTRIES.forEach(function(g){g[1].forEach(function(n){if(all.indexOf(n)<0)all.push(n)})});all.sort(function(a,b){return a.toLowerCase()<b.toLowerCase()?-1:1});
+  var inList=!f.pcountry||all.indexOf(f.pcountry)>=0,co='<option value="">— Select country —</option>';all.forEach(function(n){co+='<option'+(n===f.pcountry?' selected':'')+'>'+esc(n)+'</option>'});
+  h+='<div id="f-placerow" style="display:'+(k==='inperson'?'block':'none')+'"><label>Where (venue / address)</label><input id="f-venue" maxlength="160" placeholder="e.g. THQ Conference Room, 2nd floor" value="'+esc(f.venue||'')+'"><div class="two"><div><label>City</label><input id="f-city" maxlength="80" value="'+esc(f.city||'')+'"></div><div><label>Country</label><select id="f-pcountry">'+co+'</select><input id="f-pcountry-other" style="margin-top:6px" placeholder="Others: type here if not in the list" value="'+esc(inList?'':f.pcountry)+'"></div></div></div>';
+  return h+'</div>';
+}
+function kindVal(c){var o={kind:undefined,act:undefined,venue:undefined,city:undefined,pcountry:undefined};if(!isGroupCat(c))return o;var k=(document.getElementById('f-kind')||{}).value||'online';o.kind=k;
+  if(k==='activity')o.act=(document.getElementById('f-act')||{}).value||undefined;
+  if(k==='inperson'){function v(id){var x=((document.getElementById(id)||{}).value||'').trim();return x||undefined}o.venue=v('f-venue');o.city=v('f-city');o.pcountry=v('f-pcountry-other')||v('f-pcountry')}
+  return o}
+function kindSync(){var c=(document.getElementById('f-cat')||{}).value,k=(document.getElementById('f-kind')||{}).value,g=isGroupCat(c);
+  function sh(id,on,d){var x=document.getElementById(id);if(x)x.style.display=on?(d||'block'):'none'}
+  sh('f-kindrow',g);sh('f-actrow',g&&k==='activity');sh('f-placerow',g&&k==='inperson');sh('f-reprow',!(g&&k==='activity'))}
 function nt(){var v=(document.getElementById('f-notes')||{}).value;return v&&v.trim()?v.trim():undefined}
 function getLinks(c){var a=[];Array.prototype.forEach.call(document.querySelectorAll('#f-links input:checked'),function(x){if(x.value!==c)a.push(x.value)});return a.length?a:undefined}
 
@@ -407,12 +429,13 @@ function setStatus(t){statusText=t;var s=document.getElementById('status');if(s)
 /* ---------- modal ---------- */
 function openDay(k){
   curKey=k;editId=null;drawModal({title:'',cat:(edCats()||['asc'])[0]||'asc',start:k,end:k});
+  var rp0=document.getElementById('f-rep');if(rp0&&isGroupCat((document.getElementById('f-cat')||{}).value))rp0.value='mn';
   document.getElementById('ov').classList.add('on');
   setTimeout(function(){var t=document.getElementById('f-title');if(t)t.focus()},30);
 }
 function drawModal(f){
   var evs=evOn(curKey),h='<h3>'+esc(fmt(curKey))+'</h3><div class="sub">'+wkLabel(curKey)+'</div>';
-  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(canEd(e)?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
+  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(placeTxt(e)?' · '+esc(placeTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(canEd(e)?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
   if(!me.can_edit){
     if(!evs.length)h+='<p class="sub">Nothing planned on this day.</p>';
     var anyLim=evs.some(isLim);
@@ -425,11 +448,11 @@ function drawModal(f){
   h+='<label>Details / notes</label><textarea id="f-notes" rows="3" maxlength="2000" placeholder="Agenda, venue, Teams link, who is attending…">'+esc(f.notes||'')+'</textarea>';
   h+='<label>Type</label><select id="f-cat">';
   var EC=edCats();grouped().forEach(function(g){var gl=g[1].filter(function(c){return !EC||EC.indexOf(c)>=0});if(!gl.length)return;h+='<optgroup label="'+g[0]+'">';gl.forEach(function(c){h+='<option value="'+c+'"'+(f.cat===c?' selected':'')+'>'+CATS[c].label+'</option>'});h+='</optgroup>'});
-  h+='</select><label>Also linked to (optional)</label><div id="f-links" class="lks">';
+  h+='</select>'+kindRow(f)+'<label>Also linked to (optional)</label><div id="f-links" class="lks">';
   grouped().forEach(function(g){h+='<div class="lkh">'+g[0]+'</div>';g[1].forEach(function(c2){h+='<label class="lkc"><input type="checkbox" value="'+c2+'"'+((f.links||[]).indexOf(c2)>=0?' checked':'')+'><i class="sw" style="background:'+CATS[c2].color+'"></i>'+CATS[c2].label+'</label>'})});
   h+='</div>'+p2pRow(f)+aslfRow(f);
   h+='<div class="two"><div><label>From</label><input type="date" id="f-start" min="2027-01-01" max="2028-12-31" value="'+f.start+'"></div><div><label>To</label><input type="date" id="f-end" min="2027-01-01" max="2028-12-31" value="'+f.end+'"></div></div>';
-  h+='<div class="two"><div><label>Repeat</label><select id="f-rep">'+(editId?'<option value="keep">'+(f.grp?'Keep current repeat':'Keep as is (does not repeat)')+'</option>':'')+'<option value="">'+(editId&&f.grp?'Stop repeating (remove later dates)':'Does not repeat')+'</option><option value="w1">Every week</option><option value="w2">Every 2 weeks</option><option value="m1">Every month (same date)</option><option value="mn">Every month (same weekday, e.g. 2nd Tue)</option><option value="m2">Every 2 months</option><option value="m3">Every 3 months</option><option value="m6">Every 6 months</option><option value="y1">Every year</option></select></div><div><label>Until</label><input type="date" id="f-until" min="2027-01-01" max="2028-12-31" value="2028-12-31"></div></div><label class="chk"><input type="checkbox" id="f-wd" checked>Keep repeats on work days (Mon–Fri): Saturday and Sunday move to the Monday after</label>'+(editId&&f.grp?'<div class="sub" style="margin-top:6px">Changing the repeat replaces this date and all later dates in this series. Earlier dates stay as they are.</div>':'');
+  h+='<div id="f-reprow" style="display:'+(isGroupCat(f.cat)&&f.kind==='activity'?'none':'block')+'"><div class="two"><div><label>Repeat</label><select id="f-rep">'+(editId?'<option value="keep">'+(f.grp?'Keep current repeat':'Keep as is (does not repeat)')+'</option>':'')+'<option value="">'+(editId&&f.grp?'Stop repeating (remove later dates)':'Does not repeat')+'</option><option value="w1">Every week</option><option value="w2">Every 2 weeks</option><option value="m1">Every month (same date)</option><option value="mn">Every month (same weekday, e.g. 2nd Tue)</option><option value="m2">Every 2 months</option><option value="m3">Every 3 months</option><option value="m6">Every 6 months</option><option value="y1">Every year</option></select></div><div><label>Until</label><input type="date" id="f-until" min="2027-01-01" max="2028-12-31" value="2028-12-31"></div></div><label class="chk"><input type="checkbox" id="f-wd" checked>Keep repeats on work days (Mon–Fri): Saturday and Sunday move to the Monday after</label>'+(editId&&f.grp?'<div class="sub" style="margin-top:6px">Changing the repeat replaces this date and all later dates in this series. Earlier dates stay as they are.</div>':'')+'</div>';
   if(editId&&f.grp)h+='<label>This is a repeating entry. Save changes to:</label><label class="chk" style="margin-top:4px"><input type="radio" name="f-scope" id="f-one" checked>Only this date</label><label class="chk" style="margin-top:4px"><input type="radio" name="f-scope" id="f-all">All dates in this series (name, type, links and notes; each date stays where it is)</label>';
   h+='<div class="err" id="f-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b p" id="f-save">'+(editId?'Save changes':'Add')+'</button></div>';
   document.getElementById('modal').innerHTML=h;
@@ -441,21 +464,26 @@ function save(){
   if(!/^202[78]-\d\d-\d\d$/.test(s)||!/^202[78]-\d\d-\d\d$/.test(e)){err.textContent='Dates need to be between Jan 2027 and Dec 2028.';return}
   if(e<s){err.textContent='"To" date is before "From" date.';return}
   var repEl=document.getElementById('f-rep'),repV=repEl?repEl.value:'keep';
-  var n=nt(),L=getLinks(c),R=route(),AS=aslfVal();
+  var n=nt(),L=getLinks(c),R=route(),AS=aslfVal(),K=kindVal(c);
+  var curE=editId?state.events.filter(function(x){return x.id===editId})[0]:null;
+  if(curE&&curE.act&&curE.act!==K.act&&L)L=L.filter(function(x){return x!==curE.act});
+  if(K.act&&K.act!==c){L=L||[];if(L.indexOf(K.act)<0)L.push(K.act)}if(L&&!L.length)L=undefined;
+  if(K.kind==='activity'&&!K.act){err.textContent='Choose the kind of activity.';return}
+  function KX(o){o.kind=K.kind;o.act=K.act;o.venue=K.venue;o.city=K.city;o.pcountry=K.pcountry;return o}
   if(editId&&repV==='keep'){
     var cur=state.events.filter(function(x){return x.id===editId})[0],all=!!(cur&&cur.grp&&(document.getElementById('f-all')||{}).checked);
     state.events=state.events.map(function(x){
-      if(x.id===editId)return {id:x.id,grp:x.grp,title:t,cat:c,start:s,end:e,notes:n,links:L,from:R.from,to:R.to,host:AS.host,country:AS.country};
-      if(all&&x.grp===cur.grp)return {id:x.id,grp:x.grp,title:t,cat:c,start:x.start,end:x.end,notes:n,links:L,from:R.from,to:R.to,host:AS.host,country:AS.country};
+      if(x.id===editId)return KX({id:x.id,grp:x.grp,title:t,cat:c,start:s,end:e,notes:n,links:L,from:R.from,to:R.to,host:AS.host,country:AS.country});
+      if(all&&x.grp===cur.grp)return KX({id:x.id,grp:x.grp,title:t,cat:c,start:x.start,end:x.end,notes:n,links:L,from:R.from,to:R.to,host:AS.host,country:AS.country});
       return x});
   }else{
-    var rep=repV==='keep'?'':repV,until=(document.getElementById('f-until')||{}).value||'2028-12-31';
+    var rep=(repV==='keep'||K.kind==='activity')?'':repV,until=(document.getElementById('f-until')||{}).value||'2028-12-31';
     if(until>'2028-12-31')until='2028-12-31';
     if(rep&&until<s){err.textContent='"Until" date is before the start date.';return}
     if(editId){var cur0=state.events.filter(function(x){return x.id===editId})[0];if(cur0){var g0=cur0.grp;state.events=state.events.filter(function(x){return !(x.id===editId||(g0&&x.grp===g0&&x.start>=cur0.start))})}}
     var starts=rep?occurrences(s,rep,until):[s];if(rep&&(document.getElementById('f-wd')||{}).checked)starts=starts.map(workday);
     var dur=daysBetween(s,e),grp=starts.length>1?uid():undefined;
-    starts.forEach(function(st){var en=addDays(st,dur);if(en>'2028-12-31')en='2028-12-31';state.events.push({id:uid(),grp:grp,title:t,cat:c,start:st,end:en,notes:n,links:L,from:R.from,to:R.to,host:AS.host,country:AS.country})});
+    starts.forEach(function(st){var en=addDays(st,dur);if(en>'2028-12-31')en='2028-12-31';state.events.push(KX({id:uid(),grp:grp,title:t,cat:c,start:st,end:en,notes:n,links:L,from:R.from,to:R.to,host:AS.host,country:AS.country}))});
   }
   closeModal();persist();
 }
@@ -501,10 +529,10 @@ function exportXL(){
     });
     /* list of entries */
     var ls=wb.addWorksheet('All entries',{views:[{state:'frozen',ySplit:1}]});
-    ls.columns=[{header:'From',key:'s',width:13},{header:'To',key:'e',width:13},{header:'Week',key:'w',width:18},{header:'Type',key:'t',width:24},{header:'Also linked to',key:'l',width:28},{header:'Entry',key:'n',width:40},{header:'Details / notes',key:'d',width:50},{header:'Countries / host',key:'c',width:34},{header:'Repeats',key:'r',width:9}];
+    ls.columns=[{header:'From',key:'s',width:13},{header:'To',key:'e',width:13},{header:'Week',key:'w',width:18},{header:'Type',key:'t',width:24},{header:'Also linked to',key:'l',width:28},{header:'Entry',key:'n',width:40},{header:'Details / notes',key:'d',width:50},{header:'Format / place / countries',key:'c',width:40},{header:'Repeats',key:'r',width:9}];
     evs.forEach(function(e){
       var p=e.start.split('-').map(Number),q=e.end.split('-').map(Number);
-      var row=ls.addRow({s:new Date(Date.UTC(p[0],p[1]-1,p[2])),e:new Date(Date.UTC(q[0],q[1]-1,q[2])),w:wkLabel(e.start),t:catOf(e).label,l:links(e).map(function(c){return CATS[c].label}).join(', '),n:ttl(e),d:isLim(e)?'Summary only: details are private to the group':(e.notes||''),c:[routeTxt(e),aslfTxt(e)].filter(Boolean).join(' · '),r:e.grp?'Yes':''});
+      var row=ls.addRow({s:new Date(Date.UTC(p[0],p[1]-1,p[2])),e:new Date(Date.UTC(q[0],q[1]-1,q[2])),w:wkLabel(e.start),t:catOf(e).label,l:links(e).map(function(c){return CATS[c].label}).join(', '),n:ttl(e),d:isLim(e)?'Summary only: details are private to the group':(e.notes||''),c:[placeTxt(e),routeTxt(e),aslfTxt(e)].filter(Boolean).join(' · '),r:e.grp?'Yes':''});
       row.getCell('s').numFmt=row.getCell('e').numFmt='ddd d mmm yyyy';
       row.getCell('t').fill={type:'pattern',pattern:'solid',fgColor:{argb:tint(catOf(e).color,0.6)}};
       row.alignment={vertical:'top',wrapText:true};
@@ -719,11 +747,12 @@ document.addEventListener('change',function(ev){
   var fc=t.getAttribute&&t.getAttribute('data-flt');
   if(fc){if(t.checked)delete hidden[fc];else hidden[fc]=1;saveF();render();return}
   if(t.id==='f-host'){var cs=document.getElementById('f-country');if(cs)cs.innerHTML=countryOpts(t.value,cs.value);return}
-  if(t.id==='f-cat'||(t.closest&&t.closest('#f-links'))){
-    var cat=document.getElementById('f-cat').value;
+  if(((t.id==='f-kind'&&t.value==='online')||(t.id==='f-cat'&&isGroupCat(t.value)&&(document.getElementById('f-kind')||{}).value==='online'))&&!editId){var rp=document.getElementById('f-rep');if(rp&&!rp.value)rp.value='mn'}
+  if(t.id==='f-cat'||t.id==='f-kind'||t.id==='f-act'||(t.closest&&t.closest('#f-links'))){
+    kindSync();var cat=document.getElementById('f-cat').value;var av=((document.getElementById('f-kind')||{}).value==='activity'&&isGroupCat(cat))?(document.getElementById('f-act')||{}).value:'';
     function linked(v){var x=document.querySelector('#f-links input[value="'+v+'"]');return x&&x.checked}
-    var p=document.getElementById('f-p2p');if(p)p.style.display=(cat==='p2p'||cat==='capdev'||linked('p2p')||linked('capdev'))?'grid':'none';
-    var a=document.getElementById('f-aslf');if(a)a.style.display=(cat==='aslf'||linked('aslf'))?'grid':'none';
+    var p=document.getElementById('f-p2p');if(p)p.style.display=(cat==='p2p'||cat==='capdev'||av==='p2p'||av==='capdev'||linked('p2p')||linked('capdev'))?'grid':'none';
+    var a=document.getElementById('f-aslf');if(a)a.style.display=(cat==='aslf'||av==='aslf'||linked('aslf'))?'grid':'none';
   }
 });
 document.addEventListener('keydown',function(ev){

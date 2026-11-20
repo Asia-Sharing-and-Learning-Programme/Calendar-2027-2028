@@ -126,6 +126,24 @@ html.dark .adm-ov{background:var(--bg)}
 html.dark .ytabs button.on{background:#e6e6e3;color:#111}
 .grid.one .c{height:calc((100vh - 250px)/12);min-height:40px;max-height:72px}
 .lim{font-size:10px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;vertical-align:1px}
+.signin-btn{font:inherit;font-size:13px;font-weight:650;padding:6px 16px;border:none;border-radius:6px;background:#e24a1b;color:#fff;cursor:pointer;box-shadow:inset 0 -3px 0 #edc001}
+.signin-btn:hover{background:#005bbe;box-shadow:inset 0 -3px 0 #edc001}
+button.b.signin-btn{background:#e24a1b;color:#fff;border:none;font-weight:650;box-shadow:inset 0 -3px 0 #edc001}
+button.b.signin-btn:hover{background:#005bbe}
+button.b.signin-btn:disabled,.signin-btn:disabled{background:#9aa0a6;box-shadow:none;cursor:not-allowed}
+.limitbox{border:1px solid var(--line);border-left:4px solid #005bbe;border-radius:8px;padding:9px 11px;margin:6px 0 10px;font-size:12px;background:var(--head)}
+.limitbox.full{border-left-color:#e24a1b}
+.limitbox p{margin:6px 0 0;color:var(--ink)}
+.lb-top{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.lb-count{font-weight:650;font-variant-numeric:tabular-nums}
+.lb-bar{height:6px;background:var(--line);border-radius:4px;margin-top:6px;overflow:hidden}
+.lb-bar i{display:block;height:100%;background:#005bbe}
+.limitbox.full .lb-bar i{background:#e24a1b}
+.lb-note{color:var(--muted)!important;font-size:11.5px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.stat{border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:120px;background:var(--bg)}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;color:var(--muted)}
 </style>
 </head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
 <script id="app">
@@ -229,9 +247,9 @@ function render(){
   var h='<div class="wrap"><header><div class="brand"><img class="logo" src="'+(DARK?LOGO_DARK:LOGO_LIGHT)+'" alt="ASLP – Asia-Pacific Sharing & Learning Programme"><h1>Calendar 2027–2028</h1></div><div class="legend">';
   grouped().forEach(function(g){if(!g[1].length)return;h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
   h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
-  h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn" id="darkbtn">'+(DARK?'☀ Light mode':'☾ Dark mode')+'</button></div>';
-  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="fbtn" id="signinbtn" data-who="lead">🔒 Group lead / admin sign in</button><button class="fbtn" id="signinbtn2" data-who="member">👥 Group member sign in</button>')+'</div>';
-  if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">⚙ Admin</button>':'')+'<button class="fbtn" id="exportbtn">⬇ Download entries</button></div>';
+  h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn" id="darkbtn">'+(DARK?'Light mode':'Dark mode')+'</button></div>';
+  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
+  if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download entries</button></div>';
   h+='</div></header>';
   h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' ('+(me.role==='member'?'member':'lead')+' access); other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
@@ -363,24 +381,38 @@ function persist(){
 function refreshMe(){
   return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',role:d.role||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[]};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
 }
-function openSignin(kind){
+function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
+function limitBox(st){
+  var used=st.used||0,lim=st.limit||2,left=Math.max(0,lim-used);
+  var h='<div class="limitbox'+(left?'':' full')+'"><div class="lb-top"><b>Sign-in emails this hour</b><span class="lb-count">'+used+' of '+lim+' used</span></div><div class="lb-bar"><i style="width:'+Math.min(100,Math.round(used/lim*100))+'%"></i></div>';
+  h+='<p>'+(left?left+' sign-in email'+(left===1?'':'s')+' left this hour, shared by everyone signing in to the calendar.':'The limit is reached. The next sign-in email can be sent at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';
+  h+='<p class="lb-note">Each link works once and expires after 1 hour — check your spam folder before asking for another. Once signed in, you stay signed in on this device.</p></div>';
+  return h;
+}
+var signinStatus=null;
+function openSignin(){
   curKey=null;editId=null;
-  document.getElementById('modal').innerHTML='<h3>'+(kind==='member'?'Group member sign in':'Group lead / admin sign in')+'</h3><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll send you a sign-in link — open it on this device to start editing.</p></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b p" id="si-go">Send sign-in link</button></div>';
+  document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"><div class="lb-note">Checking the sign-in limit…</div></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-go">Send sign-in link</button></div>';
   document.getElementById('ov').classList.add('on');
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
+  sb.rpc('cal_signin_status').then(function(r){if(r.error)throw r.error;signinStatus=r.data||{};var b=document.getElementById('si-limit');if(b)b.innerHTML=limitBox(signinStatus);var go=document.getElementById('si-go');if(go&&signinStatus.used>=signinStatus.limit)go.disabled=true}).catch(function(){var b=document.getElementById('si-limit');if(b)b.innerHTML=''});
 }
 function sendLink(){
   var em=(document.getElementById('si-email').value||'').trim().toLowerCase(),err=document.getElementById('si-err'),go=document.getElementById('si-go');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err.textContent='Enter a valid email address.';return}
   go.disabled=true;err.textContent='';
-  sb.rpc('cal_check_email',{p_email:em}).then(function(r){
-    if(r.error)throw r.error;
-    if(!r.data){go.disabled=false;err.textContent='This email is not registered for the ASLP calendar. Ask an ASLP admin to add it.';return}
+  sb.rpc('cal_request_signin',{p_email:em}).then(function(r){
+    if(r.error)throw r.error;var d=r.data||{};
+    if(d.limit!=null){var b=document.getElementById('si-limit');if(b)b.innerHTML=limitBox(d)}
+    if(!d.ok){
+      if(d.reason==='not_registered'){go.disabled=false;err.textContent='This email is not registered for the ASLP calendar. Ask an ASLP admin to add it.';return}
+      err.textContent='The hourly sign-in limit is reached. Please try again at about '+hhmm(d.next_free_at)+'.';return;
+    }
     return sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
       if(r2.error)throw r2.error;
-      document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in link to <b>'+esc(em)+'</b>. Open it on this device; the calendar will open ready for editing.</p></div><div class="btns"><button class="b p" id="f-cancel">OK</button></div>';
+      document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in link to <b>'+esc(em)+'</b>. Open it on this device to see the calendar with your access.</p></div>'+limitBox(d)+'<div class="btns"><button class="b p" id="f-cancel">OK</button></div>';
     });
-  }).catch(function(e){go.disabled=false;err.textContent='Could not send the link: '+errText(e)});
+  }).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/rate limit|too many/i.test(m)?'Too many sign-in emails were sent in the last hour (this limit is shared with the CD Strategy dashboard). Please try again later.':'Could not send the link: '+m});
 }
 
 
@@ -391,16 +423,16 @@ function openAdmin(){document.getElementById('adm').classList.add('on');document
     applySettings(d.settings||{});
     adm={users:(d.users||[]).map(function(u){return {email:u.email,role:u.role,grp:u.grp||''}}),auto:d.auto||[],log:d.log||[],
       types:typesFromCurrent(),groups:JSON.parse(JSON.stringify(LEADGROUPS)),terr:COUNTRIES.map(function(g){return {cl:clName(g[0]),t:tName(g[0]),c:g[1].join(', ')}})};
-    admMsg='';renderAdmin()}).catch(function(e){document.getElementById('adm').innerHTML='<div class="adm"><p class="msg bad">Could not open admin: '+esc(errText(e))+'</p><button class="b" data-a="close">Close</button></div>'})}
+    admMsg='';renderAdmin();loadSignins()}).catch(function(e){document.getElementById('adm').innerHTML='<div class="adm"><p class="msg bad">Could not open admin: '+esc(errText(e))+'</p><button class="b" data-a="close">Close</button></div>'})}
 function closeAdmin(){document.getElementById('adm').classList.remove('on');render()}
 function roleSel(v){return '<select data-f="role">'+[['member','Group member – sees full details for their group'],['lead','Group lead – as members, plus hidden types if their group allows'],['admin','Admin – sees everything and can change it']].map(function(r){return '<option value="'+r[0]+'"'+(r[0]===v?' selected':'')+'>'+r[1]+'</option>'}).join('')+'</select>'}
 function grpSel(v){return '<select data-f="grp"><option value="">— choose group —</option>'+adm.groups.map(function(g){return '<option value="'+esc(g.key)+'"'+(g.key===v?' selected':'')+'>'+esc(g.name)+'</option>'}).join('')+'</select>'}
 function renderAdmin(){
-  var h='<div class="adm"><div class="adm-top"><h2>⚙ Calendar admin</h2><span class="msg'+(admBad?' bad':'')+'" id="admmsg">'+esc(admMsg)+'</span><span style="margin-left:auto"></span><button class="b" data-a="close">Back to calendar</button></div>';
-  h+='<div class="adm-tabs">'+[['access','Access'],['groups','Groups'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
+  var h='<div class="adm"><div class="adm-top"><h2>Calendar admin</h2><span class="msg'+(admBad?' bad':'')+'" id="admmsg">'+esc(admMsg)+'</span><span style="margin-left:auto"></span><button class="b" data-a="close">Back to calendar</button></div>';
+  h+='<div class="adm-tabs">'+[['access','Access'],['signins','Sign-ins'],['groups','Groups'],['types','Types'],['terr','Territories & countries'],['log','Activity log']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
   if(admTab==='access'){
     h+='<p class="note">Anyone can see the public summary (dates and types only). People listed here sign in with an emailed link. <b>Group members</b> see full details for entries of their group (set up in the Groups tab) and a summary of everything else. <b>Group leads</b> see the same, plus the hidden types if their group is allowed. <b>Admins</b> see everything, can add and change entries, and can use this page.</p>';
-    h+='<table><thead><tr><th>Email</th><th>Access</th><th>Group</th><th></th></tr></thead><tbody id="adm-users">';
+    h+='<table><thead><tr><th>Email</th><th>Usage rights</th><th>Group</th><th></th></tr></thead><tbody id="adm-users">';
     adm.users.forEach(function(u,i){h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"></td><td>'+roleSel(u.role)+'</td><td>'+grpSel(u.grp)+'</td><td><button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button></td></tr>'});
     if(!adm.users.length)h+='<tr><td colspan="4" class="msg">No one added here yet.</td></tr>';
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-user">+ Add person</button><button class="b p" data-a="save-users">Save access</button></div>';
@@ -424,6 +456,19 @@ function renderAdmin(){
     adm.terr.forEach(function(x,i){h+='<tr data-i="'+i+'"><td><input data-f="cl" value="'+esc(x.cl)+'" placeholder="SPEA 1"></td><td><input data-f="t" value="'+esc(x.t)+'"></td><td><input data-f="c" value="'+esc(x.c)+'"></td><td><button class="lnk del" data-a="rm-terr" data-i="'+i+'">Remove</button></td></tr>'});
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-terr">+ Add territory</button><button class="b p" data-a="save-terr">Save territories</button></div>';
   }
+  if(admTab==='signins'){
+    var s=adm.signins;
+    if(!s){h+='<p class="note">Loading…</p>'}else{
+      var st=s.status||{};
+      h+='<p class="note">Sign-in links are sent by email through Supabase. With Supabase\'s built-in email sender the whole project can send only <b>2 sign-in emails per hour</b>, shared with the CD Strategy dashboard. If you connect your own email provider (custom SMTP) in Supabase, raise the limit below to match.</p>';
+      h+=limitBox(st);
+      h+='<div class="stats"><div class="stat"><b>'+(s.links_today||0)+'</b><span>sign-in emails, last 24 h</span></div><div class="stat"><b>'+(s.signins_today||0)+'</b><span>sign-ins, last 24 h</span></div><div class="stat"><b>'+(s.signins_total||0)+'</b><span>sign-ins in total</span></div><div class="stat"><b>'+(s.people_total||0)+'</b><span>people who have signed in</span></div></div>';
+      h+='<div class="bar" style="margin:4px 0 16px"><label style="margin:0;color:var(--ink)">Sign-in emails allowed per hour</label><input id="adm-limit" type="number" min="1" step="1" value="'+(st.limit||2)+'" style="width:90px"><button class="b p" data-a="save-limit">Save limit</button><button class="b" data-a="reload-signins">Refresh</button></div>';
+      h+='<table><thead><tr><th style="width:150px">When</th><th>Email</th><th>What</th></tr></thead><tbody>';
+      h+=(s.recent||[]).length?s.recent.map(function(x){return '<tr><td>'+esc(new Date(x.at).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(x.email)+'</td><td>'+(x.kind==='signed_in'?'Signed in':'Sign-in email sent')+'</td></tr>'}).join(''):'<tr><td colspan="3" class="msg">No sign-ins yet.</td></tr>';
+      h+='</tbody></table>';
+    }
+  }
   if(admTab==='log'){
     h+='<p class="note">The latest 300 changes to the calendar and its settings.</p><table><thead><tr><th style="width:150px">When</th><th>Who</th><th>What</th></tr></thead><tbody>';
     h+=adm.log.length?adm.log.map(function(l){var d=new Date(l.at);return '<tr><td>'+esc(d.toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(l.email)+'</td><td><b>'+esc(l.action)+'</b> '+esc(l.detail)+'</td></tr>'}).join(''):'<tr><td colspan="3" class="msg">No changes recorded yet.</td></tr>';
@@ -431,6 +476,7 @@ function renderAdmin(){
   }
   h+='</div>';document.getElementById('adm').innerHTML=h;
 }
+function loadSignins(){sb.rpc('cal_admin_signins').then(function(r){if(r.error)throw r.error;if(adm){adm.signins=r.data||{};if(admTab==='signins')renderAdmin()}}).catch(function(e){if(adm){adm.signins={recent:[],status:{}};admSay('Could not load sign-ins: '+errText(e),true)}})}
 function rows(id){return Array.prototype.map.call(document.querySelectorAll('#'+id+' tr[data-i]'),function(tr){var o={};Array.prototype.forEach.call(tr.querySelectorAll('[data-f]'),function(x){o[x.getAttribute('data-f')]=x.type==='checkbox'?x.checked:x.value.trim()});return o})}
 function syncAdm(){if(!adm)return;if(document.getElementById('adm-users'))adm.users=rows('adm-users');if(document.getElementById('adm-types')){var r=rows('adm-types');adm.types=adm.types.map(function(x,i){return {key:x.key,label:r[i]?r[i].label:x.label,color:r[i]?r[i].color:x.color,group:r[i]?r[i].group:x.group,restricted:r[i]?!!r[i].restricted:!!x.restricted}})}
   if(document.getElementById('adm-groups')){adm.groups=Array.prototype.map.call(document.querySelectorAll('#adm-groups tr[data-i]'),function(tr,i){var g=adm.groups[i]||{};return {key:g.key||'',name:tr.querySelector('[data-f=name]').value.trim(),types:Array.prototype.filter.call(tr.querySelectorAll('[data-t]'),function(x){return x.checked}).map(function(x){return x.getAttribute('data-t')}),restricted:tr.querySelector('[data-r]').checked}})}if(document.getElementById('adm-terr'))adm.terr=rows('adm-terr')}
@@ -457,6 +503,8 @@ document.addEventListener('click',function(ev){
   if(a==='save-terr'){var te=adm.terr.filter(function(x){return x.t&&x.c});if(!te.length){admSay('Add at least one territory with countries',true);return}
     var val=te.map(function(x){return [(x.cl?x.cl+' · ':'')+x.t,x.c.split(',').map(function(s){return s.trim()}).filter(Boolean)]});admSave('cal_admin_set_setting',{p_key:'countries',p_value:val},'Territories saved');return}
   if(a==='reload-log'){openAdmin();return}
+  if(a==='reload-signins'){adm.signins=null;renderAdmin();loadSignins();return}
+  if(a==='save-limit'){var v=parseInt((document.getElementById('adm-limit')||{}).value,10);if(!(v>=1)){admSay('Enter a whole number of at least 1',true);return}admSave('cal_admin_set_setting',{p_key:'signin_limit',p_value:[v]},'Limit saved');setTimeout(loadSignins,800);return}
 });
 /* ---------- events ---------- */
 document.addEventListener('click',function(ev){
@@ -465,7 +513,7 @@ document.addEventListener('click',function(ev){
   if(t.id==='exportbtn'){download('aslp-calendar-entries.json',JSON.stringify(state,null,1),'application/json');return}
   if(t.hasAttribute&&t.hasAttribute('data-ysel')){YSEL=t.getAttribute('data-ysel');try{localStorage.setItem('aslpYear',YSEL)}catch(e){}render();return}
   if(t.id==='adminbtn'){openAdmin();return}
-  if(t.id==='signinbtn'||t.id==='signinbtn2'){openSignin(t.getAttribute('data-who'));return}
+  if(t.id==='signinbtn'){openSignin();return}
   if(t.id==='si-go'){sendLink();return}
   if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};load()});return}
   if(t.id==='f-from-clear'){ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('#f-from input:checked'),function(x){x.checked=false});var fo2=document.getElementById('f-from-other');if(fo2)fo2.value='';return}
@@ -496,7 +544,7 @@ document.addEventListener('keydown',function(ev){
 });
 
 render();
-sb.auth.onAuthStateChange(function(evt){if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
+sb.auth.onAuthStateChange(function(evt,session){if(evt==='SIGNED_IN'&&session){var key='aslpSignedIn:'+(session.user&&session.user.id);try{if(!sessionStorage.getItem(key)){sessionStorage.setItem(key,'1');sb.rpc('cal_record_signin').then(function(){},function(){})}}catch(e){}}if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
 refreshMe();
 /* pick up other people's changes */
 window.addEventListener('focus',function(){if(loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});

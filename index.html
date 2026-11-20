@@ -620,7 +620,7 @@ function sendLink(){
     if(d.limit!=null){var b=document.getElementById('si-limit');if(b)b.innerHTML=limitBox(d)}
     if(!d.ok){
       if(d.reason==='not_registered'){go.disabled=false;err.textContent='This email is not registered for the ASLP calendar. Ask an ASLP admin to add it.';return}
-      err.textContent='You've reached your sign-in limit for this hour. Please try again at about '+hhmm(d.next_free_at)+'.';return;
+      err.textContent='You have reached your sign-in limit for this hour. Please try again at about '+hhmm(d.next_free_at)+'.';return;
     }
     return sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
       if(r2.error)throw r2.error;

@@ -590,13 +590,13 @@ function refreshMe(){
 function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
 function limitBox(st){
   var note='<p class="lb-note">Each link works once and expires after 1 hour — check your spam folder before asking for another. Once signed in, you stay signed in on this device.</p></div>';
-  if(!st)return '<div class="limitbox"><div class="lb-top"><b>Sign-in emails</b></div><p>Each person can request up to <b>2</b> sign-in emails per hour. Your count appears when you enter your email.</p>'+note;
-  var used=st.used||0,lim=st.limit||2,left=Math.max(0,lim-used);
+  if(!st)return '<div class="limitbox"><div class="lb-top"><b>Sign-in emails</b></div><p>Each person can request up to <b>'+signinLimitN+'</b> sign-in emails per hour. Your count appears when you enter your email.</p>'+note;
+  var used=st.used||0,lim=st.limit||signinLimitN,left=Math.max(0,lim-used);signinLimitN=lim;
   var h='<div class="limitbox'+(left?'':' full')+'"><div class="lb-top"><b>Your sign-in emails this hour</b><span class="lb-count">'+used+' of '+lim+' used</span></div><div class="lb-bar"><i style="width:'+Math.min(100,Math.round(used/lim*100))+'%"></i></div>';
   h+='<p>'+(left?'You can request '+left+' more sign-in email'+(left===1?'':'s')+' this hour.':'You\'ve reached your limit. You can request another sign-in email at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';
   return h+note;
 }
-var signinCheckT=null;
+var signinCheckT=null,signinLimitN=3;
 function checkMyLimit(){
   var i=document.getElementById('si-email');if(!i)return;var em=(i.value||'').trim().toLowerCase(),b=document.getElementById('si-limit'),go=document.getElementById('si-go');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){signinStatus=null;if(b)b.innerHTML=limitBox(null);if(go)go.disabled=false;return}
@@ -609,6 +609,7 @@ function openSignin(){
   document.getElementById('ov').classList.add('on');
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
   signinStatus=null;var lb=document.getElementById('si-limit');if(lb)lb.innerHTML=limitBox(null);
+  sb.rpc('signin_status_for',{p_email:''}).then(function(r){if(r.data&&r.data.limit){signinLimitN=r.data.limit;var b2=document.getElementById('si-limit');if(b2&&!signinStatus)b2.innerHTML=limitBox(null)}}).catch(function(){});
   var ie=document.getElementById('si-email');if(ie)ie.addEventListener('input',function(){clearTimeout(signinCheckT);var er=document.getElementById('si-err');if(er)er.textContent='';signinCheckT=setTimeout(checkMyLimit,450)});
 }
 function sendLink(){
@@ -679,7 +680,7 @@ function renderAdmin(){
       var st=s.status||{};
       h+=limitBox(st);
       h+='<div class="stats"><div class="stat"><b>'+(s.signins_today||0)+'</b><span>sign-ins, last 24 h</span></div><div class="stat"><b>'+(s.links_today||0)+'</b><span>sign-in emails, last 24 h</span></div><div class="stat"><b>'+(s.people_total||0)+'</b><span>people signed in so far</span></div></div>';
-      h+='<details class="more-set"><summary>Change the hourly limit</summary><p class="note">Supabase\'s built-in email allows 2 per hour, shared with the CD Strategy dashboard. Only raise this after connecting your own email provider in Supabase.</p><div class="bar" style="margin-top:6px"><input id="adm-limit" type="number" min="1" step="1" value="'+(st.limit||2)+'" style="width:90px"><button class="b p" data-a="save-limit">Save</button></div></details>';
+      h+='<details class="more-set"><summary>Change the hourly limit</summary><p class="note">This is the limit <b>per person</b> per hour, on both ASLP websites (Calendar and CD Strategies). Supabase\'s built-in email service also has its own small overall limit until your own email provider (e.g. Brevo) is connected in Supabase.</p><div class="bar" style="margin-top:6px"><input id="adm-limit" type="number" min="1" step="1" value="'+(st.limit||2)+'" style="width:90px"><button class="b p" data-a="save-limit">Save</button></div></details>';
       h+='<table class="simple" style="margin-top:12px"><thead><tr><th style="width:170px">When</th><th>Email</th><th style="width:170px">What</th></tr></thead><tbody>';
       h+=(s.recent||[]).length?s.recent.slice(0,50).map(function(x){return '<tr><td>'+esc(new Date(x.at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+'</td><td>'+esc(x.email)+'</td><td>'+(x.kind==='signed_in'?'Signed in':'Link sent')+'</td></tr>'}).join(''):'<tr><td colspan="3" class="msg">No sign-ins yet.</td></tr>';
       h+='</tbody></table>';

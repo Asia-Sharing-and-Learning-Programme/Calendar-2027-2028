@@ -419,7 +419,7 @@ function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digi
 function limitBox(st){
   var used=st.used||0,lim=st.limit||2,left=Math.max(0,lim-used);
   var h='<div class="limitbox'+(left?'':' full')+'"><div class="lb-top"><b>Sign-in emails this hour</b><span class="lb-count">'+used+' of '+lim+' used</span></div><div class="lb-bar"><i style="width:'+Math.min(100,Math.round(used/lim*100))+'%"></i></div>';
-  h+='<p>'+(left?left+' sign-in email'+(left===1?'':'s')+' left this hour, shared by everyone signing in to the calendar.':'The limit is reached. The next sign-in email can be sent at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';
+  h+='<p>'+(left?left+' sign-in email'+(left===1?'':'s')+' left this hour, shared by everyone signing in to the ASLP websites (Calendar and CD Strategies).':'The limit is reached. The next sign-in email can be sent at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';
   h+='<p class="lb-note">Each link works once and expires after 1 hour — check your spam folder before asking for another. Once signed in, you stay signed in on this device.</p></div>';
   return h;
 }

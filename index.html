@@ -144,6 +144,19 @@ button.b.signin-btn:disabled,.signin-btn:disabled{background:#9aa0a6;box-shadow:
 .stat{border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:120px;background:var(--bg)}
 .stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
 .stat span{font-size:11px;color:var(--muted)}
+.qgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media(max-width:1000px){.qgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qcard{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)}
+.qhead{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.qhead span{font-size:12px;color:var(--muted)}
+.qhead .qtot{margin-left:auto;font-size:20px;font-weight:700;color:var(--ink)}
+.qsec{margin-top:8px}
+.qsec-h{display:flex;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:3px;margin-bottom:3px}
+.qsec-h span,.qrow span{margin-left:auto;font-variant-numeric:tabular-nums}
+.qrow{display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0}
+.qrow.none{color:var(--muted);font-size:12px}
+.qsum{max-width:none}
+.note2{font-size:12px;color:var(--muted);margin:0 0 10px}
 </style>
 </head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
 <script id="app">
@@ -281,12 +294,33 @@ function render(){
       }
     }
   });
+  if(!me.can_view){h+='</div>'+quarterSummary();}else{
   h+='</div><div class="list"><h2>'+(Object.keys(hidden).length?'Filtered entries ('+state.events.filter(visible).length+' of '+state.events.length+')':'All entries ('+state.events.length+')')+'</h2>';
   var all=state.events.filter(visible).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0});
   if(!all.length)h+='<div class="emptymsg">Nothing planned yet — click a day above to start.</div>';
   all.forEach(function(e){h+='<div class="row" data-open="'+e.start+'"><i class="sw" style="background:'+catOf(e).color+'"></i>'+links(e).map(function(c2){return '<i class="sw" style="background:'+CATS[c2].color+';margin-left:-8px;border:1px solid #fff"></i>'}).join('')+'<span class="dt">'+esc(range(e))+'</span><span>'+esc(ttl(e))+(routeTxt(e)?' ('+esc(routeTxt(e))+')':'')+(aslfTxt(e)?' ('+esc(aslfTxt(e))+')':'')+(e.notes?' <span style="color:var(--muted)">— '+esc(e.notes.length>80?e.notes.slice(0,80)+'…':e.notes)+'</span>':'')+'</span></div>'});
+  }
   h+='</div></div>';
   document.getElementById('root').innerHTML=h;
+}
+/* public: per-quarter counts instead of the full list */
+function quarterSummary(){
+  var yr=+YSEL,gs=grouped(),rows=[0,1,2,3].map(function(q){
+    var from=yr+'-'+pad(q*3+1)+'-01',to=yr+'-'+pad(q*3+3)+'-31',cnt={},tot=0;
+    state.events.filter(visible).forEach(function(e){if(e.start>=from&&e.start<=to){cnt[e.cat]=(cnt[e.cat]||0)+1;tot++}});
+    return {q:q+1,cnt:cnt,tot:tot}});
+  var h='<div class="list qsum"><h2>'+yr+' at a glance, by quarter</h2><p class="note2">Number of planned meetings and activities starting in each quarter. Multi-day activities count once. Details are private to ASLP groups — contact the ASLP team for more information.</p><div class="qgrid">';
+  rows.forEach(function(r){
+    h+='<div class="qcard"><div class="qhead"><b>Q'+r.q+' '+yr+'</b><span>'+['Jan–Mar','Apr–Jun','Jul–Sep','Oct–Dec'][r.q-1]+'</span><span class="qtot">'+r.tot+'</span></div>';
+    gs.forEach(function(g){
+      if(!g[1].length)return;
+      var items=g[1].filter(function(k){return r.cnt[k]});
+      var sub=items.reduce(function(s,k){return s+r.cnt[k]},0);
+      h+='<div class="qsec"><div class="qsec-h">'+g[0]+'<span>'+sub+'</span></div>'+(items.length?items.map(function(k){return '<div class="qrow"><i class="sw" style="background:'+CATS[k].color+'"></i>'+esc(CATS[k].label)+'<span>'+r.cnt[k]+'</span></div>'}).join(''):'<div class="qrow none">None</div>')+'</div>';
+    });
+    h+='</div>';
+  });
+  return h+'</div>';
 }
 function setStatus(t){statusText=t;var s=document.getElementById('status');if(s)s.textContent=t}
 

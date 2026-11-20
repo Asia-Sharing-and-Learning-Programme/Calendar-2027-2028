@@ -211,8 +211,10 @@ button.b.signin-btn:disabled,.signin-btn:disabled{background:#9aa0a6;box-shadow:
 .adm table.simple td{padding:6px}
 .adm table.simple td input:not([type=color]),.adm table.simple td select{width:100%}
 .more-set{margin-top:10px;font-size:13px}.more-set summary{cursor:pointer;color:#005bbe}
+.foot{margin-top:24px;padding:16px 12px 18px;background:var(--head);border-top:1px solid var(--line);text-align:center;font-size:14px;color:var(--ink)}
+.foot-sub{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
-</head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
+</head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div><footer class="foot"><div>&copy; <span id="foot-year">2026</span> Asia-Pacific Sharing &amp; Learning Programme (ASLP), The Salvation Army. All rights reserved.</div><div class="foot-sub" id="foot-time"></div></footer>
 <script id="app">
 (function(){
 var ALLYEARS=[2027,2028],YSEL=(function(){var v;try{v=localStorage.getItem('aslpYear')}catch(e){}return v==='2028'?'2028':'2027'})();
@@ -468,6 +470,7 @@ function load(quiet){
     if(r.error)throw r.error;
     var d=r.data||{};applySettings(pub?{types:d.types||[],isPublic:true}:(d.settings||{}));var evs=(d.events||[]).map(clean);
     state={events:evs};synced={};evs.forEach(function(e){synced[e.id]=sig(e)});loaded=true;
+    var ft=document.getElementById('foot-time');if(ft)ft.textContent='Data refreshed '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     if(!quiet&&!saving)setStatus('Up to date');
     if(!document.getElementById('ov').classList.contains('on'))render();
   }).catch(function(e){loaded=true;setStatus('Could not load the calendar: '+errText(e));render()});

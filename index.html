@@ -589,19 +589,27 @@ function refreshMe(){
 }
 function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
 function limitBox(st){
+  var note='<p class="lb-note">Each link works once and expires after 1 hour — check your spam folder before asking for another. Once signed in, you stay signed in on this device.</p></div>';
+  if(!st)return '<div class="limitbox"><div class="lb-top"><b>Sign-in emails</b></div><p>Each person can request up to <b>2</b> sign-in emails per hour. Your count appears when you enter your email.</p>'+note;
   var used=st.used||0,lim=st.limit||2,left=Math.max(0,lim-used);
-  var h='<div class="limitbox'+(left?'':' full')+'"><div class="lb-top"><b>Sign-in emails this hour</b><span class="lb-count">'+used+' of '+lim+' used</span></div><div class="lb-bar"><i style="width:'+Math.min(100,Math.round(used/lim*100))+'%"></i></div>';
-  h+='<p>'+(left?left+' sign-in email'+(left===1?'':'s')+' left this hour, shared by everyone signing in to the ASLP websites (Calendar and CD Strategies).':'The limit is reached. The next sign-in email can be sent at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';
-  h+='<p class="lb-note">Each link works once and expires after 1 hour — check your spam folder before asking for another. Once signed in, you stay signed in on this device.</p></div>';
-  return h;
+  var h='<div class="limitbox'+(left?'':' full')+'"><div class="lb-top"><b>Your sign-in emails this hour</b><span class="lb-count">'+used+' of '+lim+' used</span></div><div class="lb-bar"><i style="width:'+Math.min(100,Math.round(used/lim*100))+'%"></i></div>';
+  h+='<p>'+(left?'You can request '+left+' more sign-in email'+(left===1?'':'s')+' this hour.':'You\'ve reached your limit. You can request another sign-in email at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';
+  return h+note;
+}
+var signinCheckT=null;
+function checkMyLimit(){
+  var i=document.getElementById('si-email');if(!i)return;var em=(i.value||'').trim().toLowerCase(),b=document.getElementById('si-limit'),go=document.getElementById('si-go');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){signinStatus=null;if(b)b.innerHTML=limitBox(null);if(go)go.disabled=false;return}
+  sb.rpc('signin_status_for',{p_email:em}).then(function(r){if(r.error)throw r.error;var cur=document.getElementById('si-email');if(!cur||(cur.value||'').trim().toLowerCase()!==em)return;signinStatus=r.data||{};if(b)b.innerHTML=limitBox(signinStatus);if(go)go.disabled=signinStatus.used>=signinStatus.limit}).catch(function(){});
 }
 var signinStatus=null;
 function openSignin(){
   curKey=null;editId=null;
-  document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"><div class="lb-note">Checking the sign-in limit…</div></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-go">Send sign-in link</button></div>';
+  document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-go">Send sign-in link</button></div>';
   document.getElementById('ov').classList.add('on');
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
-  sb.rpc('cal_signin_status').then(function(r){if(r.error)throw r.error;signinStatus=r.data||{};var b=document.getElementById('si-limit');if(b)b.innerHTML=limitBox(signinStatus);var go=document.getElementById('si-go');if(go&&signinStatus.used>=signinStatus.limit)go.disabled=true}).catch(function(){var b=document.getElementById('si-limit');if(b)b.innerHTML=''});
+  signinStatus=null;var lb=document.getElementById('si-limit');if(lb)lb.innerHTML=limitBox(null);
+  var ie=document.getElementById('si-email');if(ie)ie.addEventListener('input',function(){clearTimeout(signinCheckT);var er=document.getElementById('si-err');if(er)er.textContent='';signinCheckT=setTimeout(checkMyLimit,450)});
 }
 function sendLink(){
   var em=(document.getElementById('si-email').value||'').trim().toLowerCase(),err=document.getElementById('si-err'),go=document.getElementById('si-go');
@@ -612,7 +620,7 @@ function sendLink(){
     if(d.limit!=null){var b=document.getElementById('si-limit');if(b)b.innerHTML=limitBox(d)}
     if(!d.ok){
       if(d.reason==='not_registered'){go.disabled=false;err.textContent='This email is not registered for the ASLP calendar. Ask an ASLP admin to add it.';return}
-      err.textContent='The hourly sign-in limit is reached. Please try again at about '+hhmm(d.next_free_at)+'.';return;
+      err.textContent='You've reached your sign-in limit for this hour. Please try again at about '+hhmm(d.next_free_at)+'.';return;
     }
     return sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
       if(r2.error)throw r2.error;

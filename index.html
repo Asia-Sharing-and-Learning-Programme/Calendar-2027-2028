@@ -276,6 +276,8 @@ function range(e){return e.start===e.end?fmt(e.start):fmt(e.start)+' – '+fmt(e
 function evOn(k){return state.events.filter(function(e){return e.start<=k&&k<=e.end}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:(a.title<b.title?-1:1)})}
 function catOf(e){return CATS[e.cat]||CATS.other||{label:'Other',color:'#9e9e9e'}}
 function isLim(e){return !me.can_view||!!e.limited}
+function canEd(e){return me.is_admin||(me.can_edit&&(me.edit_groups||[]).indexOf(e.cat||'other')>=0)}
+function edCats(){return me.is_admin?null:(me.edit_groups||[]).filter(function(c){return CATS[c]})}
 function ttl(e){return e.title||catOf(e).label}
 function links(e){return (e.links||[]).filter(function(c){return CATS[c]&&c!==e.cat})}
 function labels(e){return [catOf(e).label].concat(links(e).map(function(c){return CATS[c].label})).join(' + ')}
@@ -321,7 +323,7 @@ function render(){
   h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
   if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download entries</button></div>';
   h+='</div></header>';
-  h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' ('+(me.role==='member'?'member':'lead')+' access); other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
+  h+='<p class="hint">'+(me.is_admin?'Click any day to add or change entries. ':me.can_edit?'Click any day to see entries, and to add or change '+esc(me.group_names.join(', ')||'your group')+' entries. ':me.can_view?(me.sees_all?'Click any day to see its entries. As '+esc(me.group_names.join(', '))+' member you see full details for all groups. ':'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' and for activities; other groups\' entries show as a summary — contact the ASLP team for more. '):'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
   h+='<div class="ytabs">'+[['2027','2027'],['2028','2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
   if(MOB){h+=mobileMonth();}else{
@@ -404,24 +406,25 @@ function setStatus(t){statusText=t;var s=document.getElementById('status');if(s)
 
 /* ---------- modal ---------- */
 function openDay(k){
-  curKey=k;editId=null;drawModal({title:'',cat:'asc',start:k,end:k});
+  curKey=k;editId=null;drawModal({title:'',cat:(edCats()||['asc'])[0]||'asc',start:k,end:k});
   document.getElementById('ov').classList.add('on');
   setTimeout(function(){var t=document.getElementById('f-title');if(t)t.focus()},30);
 }
 function drawModal(f){
   var evs=evOn(curKey),h='<h3>'+esc(fmt(curKey))+'</h3><div class="sub">'+wkLabel(curKey)+'</div>';
-  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(me.can_edit?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
+  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(canEd(e)?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
   if(!me.can_edit){
     if(!evs.length)h+='<p class="sub">Nothing planned on this day.</p>';
     var anyLim=evs.some(isLim);
-    h+='<p class="sub" style="margin-top:12px">'+(!me.can_view?'This public summary only shows the type of activity. Details are private to ASLP groups — please contact the ASLP team if you need more information.':anyLim?'Entries marked <b>summary only</b> belong to other ASLP groups. Contact the ASLP team if you need their details.':'Only admins can add or change entries.')+'</p>';
+    h+='<p class="sub" style="margin-top:12px">'+(!me.can_view?'This public summary only shows the type of activity. Details are private to ASLP groups — please contact the ASLP team if you need more information.':anyLim?'Entries marked <b>summary only</b> belong to other ASLP groups. Contact the ASLP team if you need their details.':'Only admins and group leads can add or change entries.')+'</p>';
     h+='<div class="btns">'+(me.email?'':'<button class="b" id="signinbtn">Sign in</button>')+'<button class="b p" id="f-cancel">Close</button></div>';
     document.getElementById('modal').innerHTML=h;return;
   }
+  if(!me.is_admin&&!editId)h+='<p class="sub" style="margin-top:12px">As a group lead you can add and change '+esc(me.group_names.join(', ')||'your group')+' entries. Other groups\' entries are view only.</p>';
   h+='<label>'+(editId?'Edit entry':'Add entry')+'</label><input id="f-title" maxlength="80" placeholder="e.g. Pakistan monitoring visit" value="'+esc(f.title)+'">';
   h+='<label>Details / notes</label><textarea id="f-notes" rows="3" maxlength="2000" placeholder="Agenda, venue, Teams link, who is attending…">'+esc(f.notes||'')+'</textarea>';
   h+='<label>Type</label><select id="f-cat">';
-  grouped().forEach(function(g){h+='<optgroup label="'+g[0]+'">';g[1].forEach(function(c){h+='<option value="'+c+'"'+(f.cat===c?' selected':'')+'>'+CATS[c].label+'</option>'});h+='</optgroup>'});
+  var EC=edCats();grouped().forEach(function(g){var gl=g[1].filter(function(c){return !EC||EC.indexOf(c)>=0});if(!gl.length)return;h+='<optgroup label="'+g[0]+'">';gl.forEach(function(c){h+='<option value="'+c+'"'+(f.cat===c?' selected':'')+'>'+CATS[c].label+'</option>'});h+='</optgroup>'});
   h+='</select><label>Also linked to (optional)</label><div id="f-links" class="lks">';
   grouped().forEach(function(g){h+='<div class="lkh">'+g[0]+'</div>';g[1].forEach(function(c2){h+='<label class="lkc"><input type="checkbox" value="'+c2+'"'+((f.links||[]).indexOf(c2)>=0?' checked':'')+'><i class="sw" style="background:'+CATS[c2].color+'"></i>'+CATS[c2].label+'</label>'})});
   h+='</div>'+p2pRow(f)+aslfRow(f);
@@ -492,7 +495,7 @@ function persist(){
 }
 /* who is signed in */
 function refreshMe(){
-  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',role:d.role||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[]};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
+  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',role:d.role||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[],edit_groups:d.edit_groups||[],sees_all:!!d.sees_all};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
 }
 function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
 function limitBox(st){
@@ -548,7 +551,7 @@ function renderAdmin(){
   var h='<div class="adm"><div class="adm-top"><h2>Calendar admin</h2><span class="msg'+(admBad?' bad':'')+'" id="admmsg">'+esc(admMsg)+'</span><span style="margin-left:auto"></span><button class="b" data-a="close">Back to calendar</button></div>';
   h+='<div class="adm-tabs">'+[['people','People'],['groups','Groups'],['types','Types'],['terr','Countries'],['signins','Sign-ins'],['log','History']].map(function(x){return '<button data-a="tab" data-tab="'+x[0]+'" class="'+(admTab===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>';
   if(admTab==='people'){
-    h+='<div class="keyrow"><span><b>Member</b> sees full details of their group</span><span><b>Lead</b> same, plus hidden types if allowed</span><span><b>Admin</b> sees and changes everything</span></div>';
+    h+='<div class="keyrow"><span><b>Member</b> sees full details of their group (ASC and APSG members: all groups)</span><span><b>Lead</b> sees all groups, edits only their own group; hidden types if allowed</span><span><b>Admin</b> sees and changes everything</span></div>';
     h+='<table class="simple"><thead><tr><th>Email</th><th style="width:120px">Rights</th><th style="width:200px">Group</th><th style="width:70px"></th></tr></thead><tbody id="adm-users">';
     var gopts=[['','—']].concat(groupTypes().map(function(x){return [x.key,x.label]}));
     adm.users.forEach(function(u,i){var mine=u.email===adm.me;h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@example.org"'+(mine?' readonly':'')+'></td><td>'+sel('role',ROLES,u.role)+'</td><td>'+sel('grp',gopts,u.role==='admin'?'':u.grp,u.role==='admin'?' disabled':'')+'</td><td>'+(mine?'<span class="msg">you</span>':'<button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button>')+'</td></tr>'});

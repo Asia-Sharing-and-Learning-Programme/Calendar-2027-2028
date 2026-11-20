@@ -157,11 +157,61 @@ button.b.signin-btn:disabled,.signin-btn:disabled{background:#9aa0a6;box-shadow:
 .qrow.none{color:var(--muted);font-size:12px}
 .qsum{max-width:none}
 .note2{font-size:12px;color:var(--muted);margin:0 0 10px}
+
+.mob-only{display:none}
+@media (max-width:760px){
+  .mob-only{display:inline-block}
+  .wrap{padding:10px 10px 24px}
+  header{flex-direction:column;align-items:stretch;gap:8px;flex-wrap:wrap}
+  .brand{flex-direction:row;align-items:center;gap:10px}
+  .logo{height:56px}
+  .brand h1{font-size:15px;margin:0}
+  .rside{margin-left:0;align-items:flex-start;max-width:none}
+  .rtop{justify-content:flex-start;max-width:none;flex-wrap:wrap}
+  .legend{display:none;flex:none;overflow:visible}
+  body.showfilt .legend{display:flex}
+  .fg{flex-wrap:wrap !important;white-space:normal}
+  .fgt{min-width:0;width:100%}
+  .hint{font-size:12px}
+  .ytabs button{flex:1;padding:8px}
+  .mchips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;-webkit-overflow-scrolling:touch}
+  .mchips button{flex:none;font:inherit;font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:16px;background:var(--head);color:var(--ink)}
+  .mchips button.on{background:#e24a1b;border-color:#e24a1b;color:#fff}
+  .mnav{display:flex;align-items:center;justify-content:space-between;margin:2px 0 8px}
+  .mnav b{font-size:15px}.mnav b span{font-weight:500;color:var(--muted);font-size:13px}
+  .mnav .fbtn{font-size:13px;padding:6px 10px}
+  .mnav .fbtn:disabled{opacity:.4}
+  .mgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);background:#fff;border-radius:8px;overflow:hidden}
+  html.dark .mgrid{background:#17191c}
+  .mh{font-size:11px;font-weight:650;text-align:center;padding:5px 0;background:var(--head);color:var(--muted);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .mh.we{color:#a39a85}
+  .mc{min-height:68px;padding:3px 2px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;cursor:pointer}
+  .mc.we{background:var(--wkend)}.mc.x{background:var(--head);cursor:default}
+  .mc .d{font-size:12px}
+  .mev{font-size:9.5px;line-height:13px;height:13px;border-radius:3px;padding:0 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .list{margin-top:14px}
+  .row{flex-wrap:wrap;gap:4px 8px;padding:8px 4px;border-bottom:1px solid var(--line);border-radius:0}
+  .row .dt{min-width:0;width:100%;font-size:12px}
+  .qgrid{grid-template-columns:1fr}
+  .ov{align-items:flex-end}
+  .modal{width:100%;max-width:none;max-height:88vh;border-radius:14px 14px 0 0;padding:16px}
+  .two{grid-template-columns:1fr}
+  .lks{grid-template-columns:1fr}
+  .btns .b{flex:1;padding:10px}
+  input,select,textarea{font-size:16px}
+  .adm{padding:12px}
+  .adm table{display:block;overflow-x:auto;white-space:nowrap}
+  .adm-top{flex-wrap:wrap}
+  .stat{min-width:0;flex:1 1 40%}
+  .ex{flex-wrap:wrap}
+  .ex .t{flex:1 1 100%}
+}
 </style>
 </head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div>
 <script id="app">
 (function(){
 var ALLYEARS=[2027,2028],YSEL=(function(){var v;try{v=localStorage.getItem('aslpYear')}catch(e){}return v==='2028'?'2028':'2027'})();
+var MQ=window.matchMedia('(max-width: 760px)'),MOB=MQ.matches,MSEL=(function(){var v;try{v=parseInt(localStorage.getItem('aslpMonth'),10)}catch(e){}return v>=0&&v<12?v:0})();
 function shownYears(){return YSEL==='both'?ALLYEARS:[+YSEL]}
 var LOGO_LIGHT='aslp-logo-light.png',LOGO_DARK='aslp-logo-dark.png';
 var SUPABASE_URL='https://emvtqqjiirgcgghcaeps.supabase.co',SUPABASE_KEY='sb_publishable_cHpOvFlPWmirE_426PPIbg_XYo-klC9';
@@ -260,13 +310,14 @@ function render(){
   var h='<div class="wrap"><header><div class="brand"><img class="logo" src="'+(DARK?LOGO_DARK:LOGO_LIGHT)+'" alt="ASLP – Asia-Pacific Sharing & Learning Programme"><h1>Calendar 2027–2028</h1></div><div class="legend">';
   grouped().forEach(function(g){if(!g[1].length)return;h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
   h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
-  h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn" id="darkbtn">'+(DARK?'Light mode':'Dark mode')+'</button></div>';
+  h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn mob-only" id="filtbtn">Filters'+(Object.keys(hidden).length?' ('+Object.keys(hidden).length+' off)':'')+'</button><button class="fbtn" id="darkbtn">'+(DARK?'Light mode':'Dark mode')+'</button></div>';
   h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
   if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download entries</button></div>';
   h+='</div></header>';
   h+='<p class="hint">'+(me.can_edit?'Click any day to add or change entries. ':me.can_view?'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' ('+(me.role==='member'?'member':'lead')+' access); other entries show as a summary — contact the ASLP team for more. ':'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
   h+='<div class="ytabs">'+[['2027','2027'],['2028','2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
+  if(MOB){h+=mobileMonth();}else{
   h+='<div class="grid'+(YSEL==='both'?'':' one')+'"><div class="h" style="grid-column:span 2"></div>';
   for(var w=0;w<6;w++)h+='<div class="h wk" style="grid-column:span '+(w<5?7:2)+'">'+(w<5?'Week ':'Wk ')+(w+1)+'</div>';
   h+='<div class="h" style="grid-column:span 2"></div>';
@@ -294,9 +345,10 @@ function render(){
       }
     }
   });
+  }
   if(!me.can_view){h+='</div>'+quarterSummary();}else{
-  h+='</div><div class="list"><h2>'+(Object.keys(hidden).length?'Filtered entries ('+state.events.filter(visible).length+' of '+state.events.length+')':'All entries ('+state.events.length+')')+'</h2>';
-  var all=state.events.filter(visible).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0});
+  h+='</div><div class="list"><h2>'+(MOB?'Entries in '+MONTHS[MSEL]+' '+YSEL+' ('+state.events.filter(visible).filter(inMonth).length+')':Object.keys(hidden).length?'Filtered entries ('+state.events.filter(visible).length+' of '+state.events.length+')':'All entries ('+state.events.length+')')+'</h2>';
+  var all=state.events.filter(visible).filter(function(e){return !MOB||inMonth(e)}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0});
   if(!all.length)h+='<div class="emptymsg">Nothing planned yet — click a day above to start.</div>';
   all.forEach(function(e){h+='<div class="row" data-open="'+e.start+'"><i class="sw" style="background:'+catOf(e).color+'"></i>'+links(e).map(function(c2){return '<i class="sw" style="background:'+CATS[c2].color+';margin-left:-8px;border:1px solid #fff"></i>'}).join('')+'<span class="dt">'+esc(range(e))+'</span><span>'+esc(ttl(e))+(routeTxt(e)?' ('+esc(routeTxt(e))+')':'')+(aslfTxt(e)?' ('+esc(aslfTxt(e))+')':'')+(e.notes?' <span style="color:var(--muted)">— '+esc(e.notes.length>80?e.notes.slice(0,80)+'…':e.notes)+'</span>':'')+'</span></div>'});
   }
@@ -322,6 +374,25 @@ function quarterSummary(){
   });
   return h+'</div>';
 }
+/* ---------- phone view: one month at a time ---------- */
+function inMonth(e){var a=YSEL+'-'+pad(MSEL+1)+'-01',b=YSEL+'-'+pad(MSEL+1)+'-31';return e.start<=b&&e.end>=a}
+function mobileMonth(){
+  var yr=+YSEL,m=MSEL,h='<div class="mchips">'+MONTHS.map(function(n,i){return '<button data-msel="'+i+'" class="'+(i===m?'on':'')+'">'+n+'</button>'}).join('')+'</div>';
+  h+='<div class="mnav"><button class="fbtn" data-mstep="-1"'+(m===0?' disabled':'')+'>‹ Prev</button><b>'+['January','February','March','April','May','June','July','August','September','October','November','December'][m]+' '+yr+' <span>· Q'+(Math.floor(m/3)+1)+'</span></b><button class="fbtn" data-mstep="1"'+(m===11?' disabled':'')+'>Next ›</button></div>';
+  h+='<div class="mgrid">'+WD.map(function(w,i){return '<div class="mh'+(i>4?' we':'')+'">'+w+'</div>'}).join('');
+  var off=(new Date(yr,m,1).getDay()+6)%7,days=new Date(yr,m+1,0).getDate(),cells=Math.ceil((off+days)/7)*7;
+  for(var j=0;j<cells;j++){
+    var d=j-off+1;
+    if(d<1||d>days){h+='<div class="mc x"></div>';continue}
+    var k=key(yr,m,d),evs=evOn(k).filter(visible);
+    h+='<div class="mc'+(j%7>4?' we':'')+'" data-k="'+k+'"><div class="d">'+d+'</div>';
+    evs.slice(0,3).forEach(function(e){h+='<div class="mev" style="background:'+catOf(e).color+';color:'+ink(catOf(e).color)+'">'+esc(catOf(e).label.replace(/^CWG\s*[–-]\s*/,''))+'</div>'});
+    if(evs.length>3)h+='<div class="more">+'+(evs.length-3)+'</div>';
+    h+='</div>';
+  }
+  return h;
+}
+MQ.addEventListener&&MQ.addEventListener('change',function(e){MOB=e.matches;if(loaded&&!document.getElementById('ov').classList.contains('on'))render()});
 function setStatus(t){statusText=t;var s=document.getElementById('status');if(s)s.textContent=t}
 
 /* ---------- modal ---------- */
@@ -546,13 +617,16 @@ document.addEventListener('click',function(ev){
   if(t.id==='darkbtn'){DARK=!DARK;lsSet('aslpDark',DARK?'1':'0');document.documentElement.classList.toggle('dark',DARK);render();return}
   if(t.id==='exportbtn'){download('aslp-calendar-entries.json',JSON.stringify(state,null,1),'application/json');return}
   if(t.hasAttribute&&t.hasAttribute('data-ysel')){YSEL=t.getAttribute('data-ysel');try{localStorage.setItem('aslpYear',YSEL)}catch(e){}render();return}
+  if(t.hasAttribute&&t.hasAttribute('data-msel')){MSEL=+t.getAttribute('data-msel');try{localStorage.setItem('aslpMonth',MSEL)}catch(e){}render();var c=document.querySelector('.mchips .on');if(c&&c.scrollIntoView)c.scrollIntoView({inline:'center',block:'nearest'});return}
+  if(t.hasAttribute&&t.hasAttribute('data-mstep')){MSEL=Math.max(0,Math.min(11,MSEL+(+t.getAttribute('data-mstep'))));try{localStorage.setItem('aslpMonth',MSEL)}catch(e){}render();return}
+  if(t.id==='filtbtn'){document.body.classList.toggle('showfilt');return}
   if(t.id==='adminbtn'){openAdmin();return}
   if(t.id==='signinbtn'){openSignin();return}
   if(t.id==='si-go'){sendLink();return}
   if(t.id==='signoutbtn'){sb.auth.signOut().then(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};load()});return}
   if(t.id==='f-from-clear'){ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('#f-from input:checked'),function(x){x.checked=false});var fo2=document.getElementById('f-from-other');if(fo2)fo2.value='';return}
   if(t.hasAttribute&&t.hasAttribute('data-fall')){hidden={};if(t.getAttribute('data-fall')==='0')for(var c in CATS)hidden[c]=1;saveF();render();return}
-  var cell=t.closest&&t.closest('.c[data-k]');if(cell){openDay(cell.getAttribute('data-k'));return}
+  var cell=t.closest&&t.closest('.c[data-k],.mc[data-k]');if(cell){openDay(cell.getAttribute('data-k'));return}
   var row=t.closest&&t.closest('[data-open]');if(row){openDay(row.getAttribute('data-open'));return}
   if(t.id==='ov'||t.id==='f-cancel'){closeModal();return}
   if(t.id==='f-save'){save();return}

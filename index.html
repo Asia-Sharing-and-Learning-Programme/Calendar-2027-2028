@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="/aslp-chrome.css">
 <script src="/aslp-chrome.js" data-page="calendar"></script>
 <script src="/aslp-tour.js"></script>
+<script src="/aslp-pin.js"></script>
 <style id="css">
 .signin p{font-size:13px;color:var(--ink);margin:0 0 6px}
 .who{font-size:12px;color:var(--muted)}
@@ -57,6 +58,7 @@ label.flt.off{color:var(--muted)}
 .emptymsg{font-size:13px;color:var(--muted)}
 .ov{position:fixed;inset:0;background:rgba(20,20,20,.28);display:none;align-items:center;justify-content:center;z-index:1200}
 .ov.on{display:flex}
+.si-alt{margin-top:16px;border-top:1px solid var(--line,#ddd);padding-top:12px}.si-alt summary{cursor:pointer;font-weight:600;font-size:14px}.si-alt[open] summary{margin-bottom:8px}
 .modal{background:#fff;border-radius:10px;width:min(500px,94vw);max-height:92vh;overflow:auto;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.18)}
 .modal h3{margin:0 0 4px;font-size:16px}
 .modal .sub{font-size:12px;color:var(--muted);margin-bottom:10px}
@@ -746,8 +748,11 @@ function checkMyLimit(){
 var signinStatus=null;
 function openSignin(){
   curKey=null;editId=null;
-  document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-go">Send sign-in link</button></div>';
+  document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Sign in with your email and PIN. It\'s the same sign-in as the ASLP website and CD Strategies.</p></div><div id="pin-box"></div>'+
+    '<details class="si-alt"><summary>Or email me a sign-in link instead (fastest with Gmail)</summary><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b signin-btn" id="si-go">Send sign-in link</button></div></details>'+
+    '<div class="btns"><button class="b" id="f-cancel">Close</button></div>';
   document.getElementById('ov').classList.add('on');
+  if(window.ASLPPin)ASLPPin.mount(document.getElementById('pin-box'),sb,{onSignedIn:function(){closeModal();refreshMe()}});
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
   signinStatus=null;var lb=document.getElementById('si-limit');if(lb)lb.innerHTML=limitBox(null);
   sb.rpc('signin_status_for',{p_email:''}).then(function(r){if(r.data&&r.data.limit){signinLimitN=r.data.limit;var b2=document.getElementById('si-limit');if(b2&&!signinStatus)b2.innerHTML=limitBox(null)}}).catch(function(){});
@@ -926,7 +931,7 @@ document.addEventListener('change',function(ev){
 });
 document.addEventListener('keydown',function(ev){
   if(ev.key==='Escape')closeModal();
-  if(ev.key==='Enter'&&document.getElementById('ov')&&document.getElementById('ov').classList.contains('on')&&ev.target.tagName==='INPUT'){ev.preventDefault();if(ev.target.id==='si-email')sendLink();else if(ev.target.id==='si-code')signInWithCode();else if(document.getElementById('f-save'))save()}
+  if(ev.key==='Enter'&&document.getElementById('ov')&&document.getElementById('ov').classList.contains('on')&&ev.target.tagName==='INPUT'&&!ev.target.closest('.pin')){ev.preventDefault();if(ev.target.id==='si-email')sendLink();else if(ev.target.id==='si-code')signInWithCode();else if(document.getElementById('f-save'))save()}
 });
 
 /* ---------- guided test run: the real calendar, in practice mode (nothing is saved) ---------- */

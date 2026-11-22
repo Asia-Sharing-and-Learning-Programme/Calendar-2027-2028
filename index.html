@@ -5,6 +5,7 @@
 <script src="vendor/supabase.js"></script>
 <link rel="stylesheet" href="/aslp-chrome.css">
 <script src="/aslp-chrome.js" data-page="calendar"></script>
+<script src="/aslp-tour.js"></script>
 <style id="css">
 .signin p{font-size:13px;color:var(--ink);margin:0 0 6px}
 .who{font-size:12px;color:var(--muted)}
@@ -54,7 +55,7 @@ label.flt.off{color:var(--muted)}
 .row:hover{background:#efede6}
 .row .dt{color:var(--muted);min-width:240px;font-variant-numeric:tabular-nums}
 .emptymsg{font-size:13px;color:var(--muted)}
-.ov{position:fixed;inset:0;background:rgba(20,20,20,.28);display:none;align-items:center;justify-content:center;z-index:10}
+.ov{position:fixed;inset:0;background:rgba(20,20,20,.28);display:none;align-items:center;justify-content:center;z-index:1200}
 .ov.on{display:flex}
 .modal{background:#fff;border-radius:10px;width:min(500px,94vw);max-height:92vh;overflow:auto;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.18)}
 .modal h3{margin:0 0 4px;font-size:16px}
@@ -103,7 +104,7 @@ html.dark .ov{background:rgba(0,0,0,.55)}
 html.dark .lk{border-color:#17191c}
 html.dark .ev{box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
 html.dark .err{color:#f87171}
-.adm-ov{position:fixed;inset:0;background:var(--bg);z-index:20;display:none;overflow:auto}
+.adm-ov{position:fixed;inset:0;background:var(--bg);z-index:1250;display:none;overflow:auto}
 .adm-ov.on{display:block}
 .adm{max-width:980px;margin:0 auto;padding:18px 18px 40px}
 .adm-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
@@ -392,7 +393,7 @@ function render(){
   h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
   h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn mob-only" id="filtbtn">Filters'+(Object.keys(hidden).length?' ('+Object.keys(hidden).length+' off)':'')+'</button></div>';
   h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.view_only?' · view only':me.edit_all?' · ASC / SOG: full calendar':me.apsg?' · APSG member':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
-  if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download Excel</button></div>';
+  if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download Excel</button><button class="fbtn" id="tourbtn">Test run</button></div>';
   h+='</div></header>';
   h+='<p class="hint">'+(me.view_only?'Click any day to see its entries with full details. This account sees everything an admin sees but can\'t change anything. ':me.is_admin||me.edit_all?'Click any day to add or change entries. ':me.apsg?'Click any day to see entries with full details, and to add or change APSG entries. ':me.can_propose?'Click any day to see your CWG\'s entries, and to suggest changes for your CWG lead to approve. ASC and APSG meetings show as summaries. ':me.can_edit?'Click any day to see entries, and to add or change '+esc(me.group_names.join(', ')||'your group')+' entries. ':me.can_view?(me.sees_all?'Click any day to see its entries. As '+esc(me.group_names.join(', '))+' member you see full details for all groups. ':'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' and for activities; other groups\' entries show as a summary — contact the ASLP team for more. '):'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
@@ -886,6 +887,7 @@ document.addEventListener('click',function(ev){
   var t=ev.target;if(!t)return;
   if(t.id==='darkbtn'){DARK=!DARK;lsSet('aslpDark',DARK?'1':'0');document.documentElement.classList.toggle('dark',DARK);render();return}
   if(t.id==='exportbtn'){exportXL();return}
+  if(t.id==='tourbtn'){calTour('');return}
   if(t.hasAttribute&&t.hasAttribute('data-ysel')){YSEL=t.getAttribute('data-ysel');try{localStorage.setItem('aslpYear',YSEL)}catch(e){}render();return}
   if(t.hasAttribute&&t.hasAttribute('data-msel')){MSEL=+t.getAttribute('data-msel');try{localStorage.setItem('aslpMonth',MSEL)}catch(e){}render();var c=document.querySelector('.mchips .on');if(c&&c.scrollIntoView)c.scrollIntoView({inline:'center',block:'nearest'});return}
   if(t.hasAttribute&&t.hasAttribute('data-mstep')){MSEL=Math.max(0,Math.min(11,MSEL+(+t.getAttribute('data-mstep'))));try{localStorage.setItem('aslpMonth',MSEL)}catch(e){}render();return}
@@ -927,13 +929,96 @@ document.addEventListener('keydown',function(ev){
   if(ev.key==='Enter'&&document.getElementById('ov')&&document.getElementById('ov').classList.contains('on')&&ev.target.tagName==='INPUT'){ev.preventDefault();if(ev.target.id==='si-email')sendLink();else if(ev.target.id==='si-code')signInWithCode();else if(document.getElementById('f-save'))save()}
 });
 
+/* ---------- guided test run: the real calendar, in practice mode (nothing is saved) ---------- */
+var P=null;
+function practiceOn(){
+  if(P)return;P={rpc:sb.rpc.bind(sb),ups:{},dels:{},props:[],reviewed:{}};
+  var ok=function(d){return new Promise(function(r){setTimeout(function(){r({data:d||{ok:true},error:null})},350)})};
+  sb.rpc=function(n,a){a=a||{};
+    if(n==='cal_save'){(a.p_upserts||[]).forEach(function(e){P.ups[e.id]=e});(a.p_deletes||[]).forEach(function(id){P.dels[id]=1;delete P.ups[id]});return ok()}
+    if(n==='cal_propose'){var u=(a.p_upserts||[])[0]||{};P.props.push({id:'tr-'+Date.now(),summary:(u.title||'Calendar change')+(u.start?' · '+fmt(u.start):'')+' (test run)',cwg:u.cat,status:'pending',mine:true});return ok()}
+    if(n==='cal_review'){P.reviewed[a.p_id]=a.p_ok;if(a.p_ok&&a.p_id==='tr-sample'){var s=sampleEvent();P.ups[s.id]=s}return ok()}
+    if(/^cal_admin_set_/.test(n))return ok();
+    if(n==='cal_get')return P.rpc(n,a).then(function(r){if(!P||!r||!r.data||!r.data.events)return r;var evs=r.data.events.filter(function(e){return !P.dels[e.id]&&!P.ups[e.id]});for(var k in P.ups)evs.push(P.ups[k]);return {data:Object.assign({},r.data,{events:evs}),error:r.error}});
+    if(n==='cal_requests_list')return P.rpc(n,a).then(function(r){if(!P)return r;var extra=[];
+      if(me.role==='lead'&&leadCat()&&!('tr-sample' in P.reviewed))extra.push({id:'tr-sample',summary:'Sample: '+((CATS[leadCat()]||{}).label||'CWG')+' online meeting · '+fmt(TR_DAY2)+' (test run)',email:'member@example.org',cwg:leadCat(),canReview:true,status:'pending'});
+      return {data:extra.concat(P.props,(r&&r.data)||[]),error:null}});
+    return P.rpc(n,a)};
+  document.documentElement.classList.add('practicing');
+  load(true);loadRequests();
+}
+function practiceOff(){if(!P)return;sb.rpc=P.rpc;P=null;requests=[];document.documentElement.classList.remove('practicing');closeModal();var a=document.getElementById('adm');if(a)a.classList.remove('on');load(true);loadRequests()}
+var TR_DAY='2027-03-10',TR_DAY2='2027-03-17';
+function leadCat(){return (me.edit_groups||[]).filter(function(c){return CATS[c]})[0]||''}
+function sampleEvent(){return {id:'tr-sample-ev',title:'Sample: online meeting (test run)',cat:leadCat()||'asc',kind:'online',start:TR_DAY2,end:TR_DAY2}}
+function showDay(k){YSEL=k.slice(0,4);MSEL=+k.slice(5,7)-1;closeModal();render()}
+function dayCell(k){return function(){return document.querySelector('.c[data-k="'+k+'"],.mc[data-k="'+k+'"]')}}
+function viewDay(){var e=state.events.filter(function(x){return visible(x)&&!isLim(x)&&x.start.slice(0,4)==='2027'}).sort(function(a,b){return a.start<b.start?-1:1})[0];return e?e.start:TR_DAY}
+function otherDay(){var mine=leadCat()||'apsg',e=state.events.filter(function(x){return visible(x)&&!isLim(x)&&x.cat!==mine}).sort(function(a,b){return a.start<b.start?-1:1})[0];return e?e.start:''}
+function practiceDay(){var ids=Object.keys(P?P.ups:{});return ids.length&&P.ups[ids[0]].start||TR_DAY}
+function calRoleName(){return me.view_only?'view-only account':me.is_admin?'admin':me.edit_all?'ASC or SOG member':me.apsg?'APSG member':me.can_propose?'CWG member':me.can_edit?'CWG lead':'member'}
+function calSteps(){
+  var G='The Calendar',S=[],who=me.group_names.join(', ')||'your group';
+  S.push({title:'Welcome to the Calendar',text:'This is the real Calendar. As '+(/^[aeiou]/i.test(calRoleName())?'an ':'a ')+'<b>'+calRoleName()+'</b>, '+
+    (me.view_only?'you can see every entry with its full details, but you can\'t change anything.':me.is_admin?'you can add and change any entry, and manage who has access.':me.edit_all?'you can add and change any entry.':me.apsg?'you can add APSG entries, and link the APSG to other groups\' entries.':me.can_propose?'you can see your CWG\'s entries and suggest new ones for your CWG lead to approve.':me.can_edit?'you can add and change '+esc(who)+' entries, and approve what your members suggest.':'you can see the entries your access allows.')+
+    ' We\'ll try it together. Nothing you do during the test run is saved.'});
+  S.push({el:'.who',title:'Who you\'re signed in as',text:'Your email and access show here. You\'re signed in on the main website, the Calendar and CD Strategies with the same email.'});
+  S.push({el:function(){return MOB?document.getElementById('filtbtn'):document.querySelector('.legend')},title:'Show only what you need',text:'Each colour is a group or kind of activity. Untick a box to hide it, or use <b>Show all</b> and <b>Clear all</b>. Try it now.'});
+  S.push({el:'.ytabs',title:'2027 or 2028',text:'Switch between the two years of the plan.'});
+  var vd=viewDay();
+  S.push({before:function(){showDay(vd)},el:dayCell(vd),wait:'click',delay:500,title:'Open a day',text:'Select the highlighted day, <b>'+fmt(vd)+'</b>, to see what\'s planned.'});
+  S.push({el:'#modal .ex',skipIfMissing:true,title:'What\'s on that day',text:'Each entry shows its title, dates, type and details.'+(me.can_view&&!me.sees_all?' Entries marked <b>summary only</b> belong to other groups.':'')});
+  if(canWrite()){
+    S.push({before:function(){showDay(TR_DAY);openDay(TR_DAY)},el:'#f-title',title:me.can_propose&&!me.can_edit?'Suggest an entry':'Add an entry',
+      text:'Let\'s add one on '+fmt(TR_DAY)+'. You can do this from any day: select it, then fill in this form. We\'ve typed a sample title.'});
+    S.push({before:function(){ASLPTour.fillIn('#f-title','Test run: online meeting')},el:'#f-title',title:'Title',text:'Keep it short and clear, e.g. "SPEA 1 quarterly meeting".'});
+    S.push({before:function(){ASLPTour.fillIn('#f-notes','Agenda and Teams link go here.')},el:'#f-notes',title:'Details',text:'Add the agenda, venue or meeting link. Only signed-in people with access see the details.'});
+    S.push({el:'#f-cat',title:'Type',text:me.is_admin||me.edit_all?'Choose which group or kind of activity it is. Its colour comes from the type.':'You can choose from your own group\'s types: '+esc(who)+'.'});
+    S.push({el:'#f-kindrow',skipIfMissing:true,title:'Online, in person or an activity',text:'Say how it happens. In-person entries ask for the place, and help the Calendar spot possible in-person meetings.'});
+    S.push({el:'#f-links',skipIfMissing:true,title:'Link other groups',text:me.apsg?'Tick groups the entry is shared with. On other groups\' entries you can only link or unlink the APSG.':'Tick other groups that join this entry. It then shows under their colour too.'});
+    S.push({el:function(){var e=document.getElementById('f-start');return e&&e.closest('.two')},title:'Dates',text:'Choose the first and last day. For a one-day entry, use the same date twice.'});
+    S.push({el:'#f-reprow',skipIfMissing:true,title:'Repeat',text:'For regular meetings, choose how often it repeats. The Calendar adds every date for you.'});
+    S.push({el:'#f-save',wait:'click',delay:700,title:me.can_propose&&!me.can_edit?'Send it to your CWG lead':'Add it',text:me.can_propose&&!me.can_edit?'Select <b>Send to CWG lead for approval</b>. In this test run nothing is sent.':'Select <b>Add</b>. In this test run nothing is saved.'});
+    if(me.can_propose&&!me.can_edit){
+      S.push({el:'.reqs',title:'Waiting for your CWG lead',text:'Your suggestion shows under <b>Your suggested changes</b> until your CWG lead approves or declines it. Once approved, it appears on the Calendar for everyone with access.'});
+    }else{
+      S.push({before:function(){showDay(practiceDay())},el:dayCell(practiceDay()),title:'It\'s on the Calendar',text:'Your entry shows on '+fmt(TR_DAY)+' in its group\'s colour. In a real run, everyone with access sees it straight away.'});
+      S.push({before:function(){openDay(practiceDay())},el:'#modal [data-edit]',skipIfMissing:true,title:'Change or delete it',text:'Open the day and select <b>Edit</b> next to an entry to change it, or <b>Delete</b> to remove it.'});
+      if(me.apsg){var od=otherDay();if(od)S.push({before:function(){closeModal();showDay(od);openDay(od)},el:'#modal [data-apsg]',skipIfMissing:true,wait:'click',delay:700,title:'Link the APSG',text:'On other groups\' entries you\'ll see <b>Link APSG</b>. Select it to show the APSG joins, or <b>Unlink APSG</b> to remove it.'});}
+      if(me.role==='lead')S.push({before:function(){closeModal();render()},el:'[data-req-ok="tr-sample"]',skipIfMissing:true,wait:'click',delay:900,title:'Approve your members\' suggestions',
+        text:'When a member of your CWG suggests an entry, it shows here. We\'ve added a sample. Check it, then select <b>Approve</b> (or <b>Decline</b>).'});
+    }
+    S.push({before:function(){closeModal();render()},title:'Done: that\'s how entries work',text:'You can add, check and change entries any time. Next, the summaries below the Calendar.'});
+  }else{
+    S.push({el:'#modal',title:'Details for your access',text:me.view_only?'You see each entry\'s full details. As a view-only account, there\'s no option to add or change entries.':'You see the entries your access allows. To add one, ask your CWG lead or the ASLP team.'});
+    S.push({before:function(){closeModal()},el:'.list.ins',skipIfMissing:true,title:'Patterns',text:'See how often each group meets, and when people are likely to meet in person.'});
+  }
+  if(canWrite())S.push({el:'.list.ins',skipIfMissing:true,title:'Patterns and in-person meetings',text:'The Calendar works out how often each group meets, the busiest weeks, and when people could meet in person. Use it when planning.'});
+  S.push({el:function(){var l=document.querySelectorAll('.list:not(.ins):not(.reqs)');return l[l.length-1]},skipIfMissing:true,title:'Every entry, in a list',text:'All entries you can see, in date order. Select one to open its day.'});
+  S.push({el:'#exportbtn',title:'Download Excel',text:'Download the Calendar as an Excel file, with the entries your access lets you see.'});
+  if(me.is_admin){
+    S.push({el:'#adminbtn',wait:'click',delay:900,title:'Calendar admin',text:'Select <b>Admin</b> to manage who has access to the Calendar, its groups and types.'});
+    S.push({el:'#adm [data-tab="people"]',skipIfMissing:true,title:'People',text:'Add people by email and set their rights: admin, lead or member, and their group. Changes save when you select <b>Save</b>.'});
+    S.push({before:function(){var b=document.querySelector('#adm [data-tab="types"]');if(b)b.click()},el:'#adm [data-tab="types"]',skipIfMissing:true,title:'Types and colours',text:'Add or rename the kinds of entries, choose their colours, and decide who sees each one.'});
+    S.push({before:function(){var b=document.querySelector('#adm [data-tab="signins"]');if(b)b.click()},el:'#adm [data-tab="signins"]',skipIfMissing:true,title:'Sign-ins and history',text:'See who signed in, and every change made to the Calendar.'});
+    S.push({el:'#adm [data-a="close"]',skipIfMissing:true,wait:'click',title:'Close admin',text:'Select <b>Close</b> to go back to the Calendar.'});
+  }
+  S.push({el:'#tourbtn',skipIfMissing:true,title:'Take the test run again',text:'You can come back to this test run any time from here.'});
+  return S.map(function(s){s.group=s.group||G;return s});
+}
+function calTour(then){if(!window.ASLPTour||!me.email)return;window.scrollTo(0,0);
+  var st=calSteps(),last=st[st.length-1];
+  if(then&&/cd-strategy/.test(then)){last.nextLabel='Go to CD Strategies'}else if(then){last.nextLabel='Back to my console'}
+  ASLPTour.run(st,{practiceOn:practiceOn,practiceOff:practiceOff,then:then||''})}
+
 render();
 (function(){var q=new URLSearchParams(location.search),h=q.get('token_hash');if(!h)return;pendingHash=h;pendingType=q.get('type')||'email';
   history.replaceState(null,'',location.pathname+location.hash);
   document.getElementById('modal').innerHTML='<h3>Finish signing in</h3><div class="signin"><p>Click the button below to finish signing in on this device.</p></div><div class="err" id="fin-err"></div><div class="btns"><button class="b" id="f-cancel">Cancel</button><button class="b signin-btn" id="fin-go">Finish signing in</button></div>';
   document.getElementById('ov').classList.add('on');})();
 sb.auth.onAuthStateChange(function(evt,session){if(evt==='SIGNED_IN'&&session){var key='aslpSignedIn:'+(session.user&&session.user.id);try{if(!sessionStorage.getItem(key)){sessionStorage.setItem(key,'1');sb.rpc('cal_record_signin').then(function(){},function(){})}}catch(e){}}if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
-refreshMe();
+var HAND=window.ASLPTour?ASLPTour.handoff():null;
+refreshMe().then(function(){if(HAND&&me.email)setTimeout(function(){calTour(HAND.then)},400)});
 /* pick up other people's changes */
 window.addEventListener('focus',function(){if(loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});
 setInterval(function(){if(!document.hidden&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)},120000);

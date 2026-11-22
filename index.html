@@ -752,7 +752,7 @@ function openSignin(){
     '<details class="si-alt"><summary>Or email me a sign-in link instead (fastest with Gmail)</summary><div class="signin"><p>Enter the email your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"></div><input id="si-email" type="email" placeholder="name@salvationarmy.org" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b signin-btn" id="si-go">Send sign-in link</button></div></details>'+
     '<div class="btns"><button class="b" id="f-cancel">Close</button></div>';
   document.getElementById('ov').classList.add('on');
-  if(window.ASLPPin)ASLPPin.mount(document.getElementById('pin-box'),sb,{onSignedIn:function(){closeModal();refreshMe()}});
+  if(window.ASLPPin)ASLPPin.mount(document.getElementById('pin-box'),sb,{onSignedIn:function(){closeModal();refreshMe().then(function(){ASLPPin.altPrompt(sb)})}});
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
   signinStatus=null;var lb=document.getElementById('si-limit');if(lb)lb.innerHTML=limitBox(null);
   sb.rpc('signin_status_for',{p_email:''}).then(function(r){if(r.data&&r.data.limit){signinLimitN=r.data.limit;var b2=document.getElementById('si-limit');if(b2&&!signinStatus)b2.innerHTML=limitBox(null)}}).catch(function(){});
@@ -764,7 +764,7 @@ function signInWithCode(){
   var tok=((document.getElementById('si-code')||{}).value||'').replace(/\s+/g,''),err=document.getElementById('si-err'),go=document.getElementById('si-code-go');
   if(!/^\d{6,10}$/.test(tok)){err.textContent='Type the code from the email (numbers only).';return}
   go.disabled=true;err.textContent='';
-  sb.auth.verifyOtp({email:codeEmail,token:tok,type:'email'}).then(function(r){go.disabled=false;if(r.error)throw r.error;closeModal();refreshMe()}).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/expired|invalid/i.test(m)?'That code didn\'t work. It may have expired or already been used. Check you typed the newest one, or request a new link.':'Could not sign in: '+m});
+  ASLPPin.verifyCode(sb,codeEmail,tok).then(function(r){go.disabled=false;if(!r.ok)throw new Error('invalid');closeModal();refreshMe()}).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/expired|invalid/i.test(m)?'That code didn\'t work. It may have expired or already been used. Check you typed the newest one, or request a new link.':'Could not sign in: '+m});
 }
 function finishLink(){
   var err=document.getElementById('fin-err'),go=document.getElementById('fin-go');go.disabled=true;err.textContent='';
@@ -774,18 +774,17 @@ function sendLink(){
   var em=(document.getElementById('si-email').value||'').trim().toLowerCase(),err=document.getElementById('si-err'),go=document.getElementById('si-go');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err.textContent='Enter a valid email address.';return}
   go.disabled=true;err.textContent='';
-  sb.rpc('cal_request_signin',{p_email:em}).then(function(r){
-    if(r.error)throw r.error;var d=r.data||{};
+  ASLPPin.sendEmail(sb,em,'calendar').then(function(d){
+    d=d||{};if(d.reason==='error'||d.reason==='send_failed')throw new Error(d.message||'Please try again');
     if(d.limit!=null){var b=document.getElementById('si-limit');if(b)b.innerHTML=limitBox(d)}
     if(!d.ok){
       if(d.reason==='not_registered'){go.disabled=false;err.textContent='This email is not registered for the ASLP calendar. Ask an ASLP admin to add it.';return}
       err.textContent='You have reached your sign-in limit for this hour. Please try again at about '+hhmm(d.next_free_at)+'.';return;
     }
-    return sb.auth.signInWithOtp({email:em,options:{emailRedirectTo:location.origin+location.pathname}}).then(function(r2){
-      if(r2.error)throw r2.error;
+    {
       codeEmail=em;
-      document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in email to <b>'+esc(em)+'</b>. Either click its link and then <b>Finish signing in</b>, or type its code below.</p></div><input id="si-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code from the email" style="letter-spacing:3px"><div class="err" id="si-err"></div>'+limitBox(d)+'<div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-code-go">Sign in with code</button></div>';
-    });
+      document.getElementById('modal').innerHTML='<h3>Check your email</h3><div class="signin"><p>We sent a sign-in email to '+(d.via_alt?'your Gmail, <b>'+esc(d.to)+'</b>':'<b>'+esc(em)+'</b>')+'. Either click its link and then <b>Finish signing in</b>, or type its code below.</p></div><input id="si-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code from the email" style="letter-spacing:3px"><div class="err" id="si-err"></div>'+limitBox(d)+'<div class="btns"><button class="b" id="f-cancel">Close</button><button class="b signin-btn" id="si-code-go">Sign in with code</button></div>';
+    }
   }).catch(function(e){go.disabled=false;var m=errText(e);err.textContent=/rate limit|too many/i.test(m)?'Too many sign-in emails were sent in the last hour (this limit is shared with the CD Strategy dashboard). Please try again later.':'Could not send the link: '+m});
 }
 
@@ -1023,7 +1022,7 @@ render();
   document.getElementById('ov').classList.add('on');})();
 sb.auth.onAuthStateChange(function(evt,session){if(evt==='SIGNED_IN'&&session){var key='aslpSignedIn:'+(session.user&&session.user.id);try{if(!sessionStorage.getItem(key)){sessionStorage.setItem(key,'1');sb.rpc('cal_record_signin').then(function(){},function(){})}}catch(e){}}if(evt==='SIGNED_IN'||evt==='SIGNED_OUT'||evt==='TOKEN_REFRESHED')refreshMe()});
 var HAND=window.ASLPTour?ASLPTour.handoff():null;
-refreshMe().then(function(){if(HAND&&me.email)setTimeout(function(){calTour(HAND.then)},400)});
+refreshMe().then(function(){if(HAND&&me.email)setTimeout(function(){calTour(HAND.then)},400);else if(me.email&&window.ASLPPin)ASLPPin.altPrompt(sb)});
 /* pick up other people's changes */
 window.addEventListener('focus',function(){if(loaded&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)});
 setInterval(function(){if(!document.hidden&&!saving&&!document.getElementById('ov').classList.contains('on'))load(true)},120000);

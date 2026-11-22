@@ -3,6 +3,8 @@
 <title>ASLP Calendar 2027–2028</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <script src="vendor/supabase.js"></script>
+<link rel="stylesheet" href="/aslp-chrome.css">
+<script src="/aslp-chrome.js" data-page="calendar"></script>
 <style id="css">
 .signin p{font-size:13px;color:var(--ink);margin:0 0 6px}
 .who{font-size:12px;color:var(--muted)}
@@ -215,8 +217,30 @@ button.b.signin-btn:disabled,.signin-btn:disabled{background:#9aa0a6;box-shadow:
 .foot{margin-top:24px;padding:16px 12px 18px;background:var(--head);border-top:1px solid var(--line);text-align:center;font-size:14px;color:var(--ink)}
 .foot-sub{font-size:12px;color:var(--muted);margin-top:6px}
 .back-strip{background:#24215f;padding:7px 20px}.back-aslp{color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}.back-aslp:hover{text-decoration:underline}
+
+/* ---------- matched to the main ASLP website ---------- */
+html:root:root{--bg:var(--ac-paper);--ink:var(--ac-ink);--muted:var(--ac-ink-3);--line:var(--ac-line)}
+body{font-family:var(--ac-font)}
+button,input,select,textarea{font-family:inherit}
+.cal-hero{max-width:1700px;margin:0 auto;padding:0 18px}
+.wrap{padding-top:0}
+header{background:var(--ac-paper-2);border-radius:20px;padding:16px 20px;margin-bottom:16px;align-items:center}
+.fgt{font-size:12px;letter-spacing:.02em;text-transform:none;font-weight:800}
+label.flt{font-size:13px}
+.fbtn{border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:650;border-color:var(--ac-line);background:var(--ac-paper);transition:background-color .3s,color .3s,border-color .3s}
+.fbtn:hover{border-color:var(--ac-ink)}
+.signin-btn,button.b.signin-btn{border-radius:999px;background:#f5c400;color:#000;box-shadow:none;font-weight:700;font-size:14px;padding:7px 18px;transition:background-color .35s,color .35s}
+.signin-btn:hover,button.b.signin-btn:hover{background:#005fc0;color:#fff;box-shadow:none}
+.ytabs{gap:6px;margin:0 0 12px}
+.ytabs button{border-radius:999px;padding:6px 18px;font-size:14px;font-weight:700;background:none;border:1.5px solid var(--ac-line)}
+.ytabs button.on,html.dark .ytabs button.on{background:var(--ac-ink);color:var(--ac-paper);border-color:var(--ac-ink)}
+.hint{font-size:13px;color:var(--ac-ink-3);margin:0 0 12px}
+.grid{border-radius:14px;overflow:hidden}
+.foot{background:none;border-top:0;padding:8px 12px 0;margin-top:8px}
+.foot>div:first-child{display:none}
+@media (max-width:760px){header{padding:12px 14px;border-radius:16px}.cal-hero{padding:0 14px}}
 </style>
-</head><body><div class="back-strip"><a class="back-aslp" href="/"><span aria-hidden="true">←</span> ASLP website</a></div><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div><footer class="foot"><div>&copy; <span id="foot-year">2026</span> Asia-Pacific Sharing &amp; Learning Programme (ASLP), The Salvation Army. All rights reserved.</div><div class="foot-sub" id="foot-time"></div></footer>
+</head><body><div class="cal-hero ac-hero"><div class="ac-crumbs"><a href="/">Home</a><span class="sep">/</span>Calendar</div><div class="ac-hero-row"><div><h1 class="ac-h1">Calendar <span class="lt">2027–2028</span></h1><p class="ac-lede">When ASLP groups meet, activities take place and reports are due across 2027 and 2028.</p></div></div></div><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div><footer class="foot"><div>&copy; <span id="foot-year">2026</span> Asia-Pacific Sharing &amp; Learning Programme (ASLP), The Salvation Army. All rights reserved.</div><div class="foot-sub" id="foot-time"></div></footer>
 <script id="app">
 (function(){
 var ALLYEARS=[2027,2028],YSEL=(function(){var v;try{v=localStorage.getItem('aslpYear')}catch(e){}return v==='2028'?'2028':'2027'})();
@@ -267,7 +291,9 @@ function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){return false}}
 var state={events:[]},synced={},loaded=false,me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]},saving=false;
 var statusText='',curKey=null,editId=null;
-var DARK=lsGet('aslpDark')==='1';document.documentElement.classList.toggle('dark',DARK);
+var DARK=window.aslpTheme?aslpTheme.dark():lsGet('aslpDark')==='1';document.documentElement.classList.toggle('dark',DARK);
+// Light / Auto / Dark comes from the shared ASLP top bar
+window.addEventListener('aslp-theme',function(e){var d=!!(e.detail&&e.detail.dark);if(d===DARK)return;DARK=d;document.documentElement.classList.toggle('dark',DARK);if(typeof render==='function'&&document.getElementById('root').firstChild)render()});
 var hidden={};try{hidden=JSON.parse(lsGet('aslpHidden')||'{}')||{}}catch(e){hidden={}}
 function saveF(){lsSet('aslpHidden',JSON.stringify(hidden))}
 
@@ -342,10 +368,10 @@ function aslfVal(){var w=document.getElementById('f-aslf');if(!w||w.style.displa
 
 /* ---------- render ---------- */
 function render(){
-  var h='<div class="wrap"><header><div class="brand"><img class="logo" src="'+(DARK?LOGO_DARK:LOGO_LIGHT)+'" alt="ASLP – Asia-Pacific Sharing & Learning Programme"><h1>Calendar 2027–2028</h1></div><div class="legend">';
+  var h='<div class="wrap"><header><div class="legend">';
   grouped().forEach(function(g){if(!g[1].length)return;h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
   h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
-  h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn mob-only" id="filtbtn">Filters'+(Object.keys(hidden).length?' ('+Object.keys(hidden).length+' off)':'')+'</button><button class="fbtn" id="darkbtn">'+(DARK?'Light mode':'Dark mode')+'</button></div>';
+  h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn mob-only" id="filtbtn">Filters'+(Object.keys(hidden).length?' ('+Object.keys(hidden).length+' off)':'')+'</button></div>';
   h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
   if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download Excel</button></div>';
   h+='</div></header>';

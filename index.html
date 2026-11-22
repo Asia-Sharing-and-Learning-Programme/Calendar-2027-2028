@@ -595,7 +595,7 @@ function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digi
 function limitSegs(left,lim,known){var h='<div class="lb-segs" role="img" aria-label="'+(known?left+' of '+lim+' sign-ins left':lim+' sign-ins per hour')+'">';for(var k=0;k<lim;k++)h+='<span class="'+(!known?'unk':k<left?'on':'')+'"></span>';return h+'</div>'}
 function limitBox(st){
   var note='<p class="lb-note">Each link works once and expires after 1 hour — check your spam folder before asking for another. Once signed in, you stay signed in on this device.</p></div>';
-  if(!st)return '<div class="limitbox"><div class="lb-top"><b>Sign-ins left this hour</b><span class="lb-count">up to '+signinLimitN+'</span></div>'+limitSegs(signinLimitN,signinLimitN,false)+'<p>Each person can request up to <b>'+signinLimitN+'</b> sign-in emails per hour. Enter your email to see how many you have left.</p>'+note;
+  if(!st)return '<div class="limitbox"><div class="lb-top"><b>Sign-ins left this hour</b><span class="lb-count">up to 5</span></div>'+limitSegs(5,5,false)+'<p>Admins and CWG leads can request up to <b>5</b> sign-in emails an hour, everyone else up to <b>3</b>. Enter your email to see how many you have left.</p>'+note;
   var used=st.used||0,lim=st.limit||signinLimitN,left=Math.max(0,lim-used);signinLimitN=lim;
   var h='<div class="limitbox'+(left?'':' full')+'"><div class="lb-top"><b>Sign-ins left this hour</b><span class="lb-count">'+left+' of '+lim+' left</span></div>'+limitSegs(left,lim,true);
   h+='<p>'+(left?'You can request '+left+' more sign-in email'+(left===1?'':'s')+' this hour.':'You have used all '+lim+' for this hour. You can request another sign-in email at about <b>'+esc(hhmm(st.next_free_at))+'</b>.')+'</p>';

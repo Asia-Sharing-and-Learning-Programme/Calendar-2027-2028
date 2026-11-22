@@ -214,8 +214,9 @@ button.b.signin-btn:disabled,.signin-btn:disabled{background:#9aa0a6;box-shadow:
 .more-set{margin-top:10px;font-size:13px}.more-set summary{cursor:pointer;color:#005bbe}
 .foot{margin-top:24px;padding:16px 12px 18px;background:var(--head);border-top:1px solid var(--line);text-align:center;font-size:14px;color:var(--ink)}
 .foot-sub{font-size:12px;color:var(--muted);margin-top:6px}
+.back-strip{background:#24215f;padding:7px 20px}.back-aslp{color:#fff;font-weight:700;font-size:13.5px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}.back-aslp:hover{text-decoration:underline}
 </style>
-</head><body><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div><footer class="foot"><div>&copy; <span id="foot-year">2026</span> Asia-Pacific Sharing &amp; Learning Programme (ASLP), The Salvation Army. All rights reserved.</div><div class="foot-sub" id="foot-time"></div></footer>
+</head><body><div class="back-strip"><a class="back-aslp" href="/"><span aria-hidden="true">←</span> ASLP website</a></div><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div><footer class="foot"><div>&copy; <span id="foot-year">2026</span> Asia-Pacific Sharing &amp; Learning Programme (ASLP), The Salvation Army. All rights reserved.</div><div class="foot-sub" id="foot-time"></div></footer>
 <script id="app">
 (function(){
 var ALLYEARS=[2027,2028],YSEL=(function(){var v;try{v=localStorage.getItem('aslpYear')}catch(e){}return v==='2028'?'2028':'2027'})();
@@ -223,7 +224,9 @@ var MQ=window.matchMedia('(max-width: 760px)'),MOB=MQ.matches,MSEL=(function(){v
 function shownYears(){return YSEL==='both'?ALLYEARS:[+YSEL]}
 var LOGO_LIGHT='aslp-logo-light.png',LOGO_DARK='aslp-logo-dark.png';
 var SUPABASE_URL='https://emvtqqjiirgcgghcaeps.supabase.co',SUPABASE_KEY='sb_publishable_cHpOvFlPWmirE_426PPIbg_XYo-klC9';
-var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{flowType:'implicit',persistSession:true,detectSessionInUrl:true,autoRefreshToken:true,storageKey:'aslp-calendar-auth'}});
+/* one sign-in for the whole ASLP website: use the same saved sign-in as the main site and the CD Strategies (carry over an older calendar-only sign-in once) */
+(function(){try{var shared='sb-emvtqqjiirgcgghcaeps-auth-token',old=localStorage.getItem('aslp-calendar-auth');if(old&&!localStorage.getItem(shared))localStorage.setItem(shared,old);if(old)localStorage.removeItem('aslp-calendar-auth')}catch(e){}})();
+var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{flowType:'implicit',persistSession:true,detectSessionInUrl:true,autoRefreshToken:true}});
 var DEFAULT_CATS={deadline:{label:'Annual report / deadline',color:'#c62828'},apsg:{label:'APSG',color:'#9e9d24'},asc:{label:'ASC',color:'#1f4fd6'},aslf:{label:'ASLF',color:'#880e4f'},aslf_tf:{label:'ASLF Task Force',color:'#546e7a'},phase2:{label:'ASLP Phase 2',color:'#0b1f5c'},capdev:{label:'Capacity Development',color:'#d4e157'},cop:{label:'COP',color:'#90caf9'},cwg_sa1:{label:'CWG – SASIA 1',color:'#00acc1'},cwg_sa2:{label:'CWG – SASIA 2',color:'#2e7d32'},cwg_spea1:{label:'CWG – SPEA 1',color:'#7b2cbf'},cwg_spea2:{label:'CWG – SPEA 2',color:'#f06292'},fcg:{label:'FCG',color:'#795548'},ihq:{label:'IHQ Boards',color:'#b39ddb'},na:{label:'Not Available',color:'#111111'},p2p:{label:'P2P visit',color:'#ff6d00'},quarterly:{label:'Quarterly report / deadline',color:'#ffab91'},scp:{label:'Significant Change Process',color:'#d500f9'},sog:{label:'SOG',color:'#f2c200'},other:{label:'Other',color:'#9e9e9e'}};
 var DEFAULT_GROUPS=[['Groups',['apsg','asc','aslf_tf','cwg_sa1','cwg_sa2','cwg_spea1','cwg_spea2','fcg','sog']],['Activities',['aslf','phase2','capdev','cop','p2p','scp']],['Others',['deadline','quarterly','ihq','na','other']]];
 var DEFAULT_COUNTRIES=[

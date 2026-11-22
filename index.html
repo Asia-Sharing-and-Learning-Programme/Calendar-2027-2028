@@ -252,6 +252,9 @@ label.flt{font-size:13px}
 .ins-ev{display:grid;grid-template-columns:12px minmax(0,1fr);gap:8px;font-size:13.5px;line-height:1.4}
 .ins-ev .sw{margin-top:4px}.ins-ev small{color:var(--muted)}
 .ins-busy{display:grid;gap:6px}.ins-busy div{display:flex;gap:12px;flex-wrap:wrap;font-size:13.5px;border-bottom:1px solid var(--line);padding:6px 0}.ins-busy span{color:var(--muted)}
+.reqs{max-width:1100px}.reqs h2{font-size:18px;font-weight:800}
+.req{display:grid;grid-template-columns:14px minmax(0,1fr) auto auto;gap:10px;align-items:center;background:var(--ac-paper-2,#f5f5f3);border-radius:14px;padding:10px 14px;margin-bottom:8px}
+.req small{display:block;color:var(--muted);font-size:12.5px}.req .sw{width:14px;height:14px}
 </style>
 </head><body><div class="cal-hero ac-hero"><div class="ac-crumbs"><a href="/">Home</a><span class="sep">/</span>Calendar</div><div class="ac-hero-row"><div><h1 class="ac-h1">Calendar <span class="lt">2027–2028</span></h1><p class="ac-lede">When ASLP groups meet, activities take place and reports are due across 2027 and 2028.</p></div></div></div><div id="root"></div><div class="ov" id="ov"><div class="modal" id="modal"></div></div><div class="adm-ov" id="adm"></div><footer class="foot"><div>&copy; <span id="foot-year">2026</span> Asia-Pacific Sharing &amp; Learning Programme (ASLP), The Salvation Army. All rights reserved.</div><div class="foot-sub" id="foot-time"></div></footer>
 <script id="app">
@@ -319,8 +322,11 @@ function range(e){return e.start===e.end?fmt(e.start):fmt(e.start)+' – '+fmt(e
 function evOn(k){return state.events.filter(function(e){return e.start<=k&&k<=e.end}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:(a.title<b.title?-1:1)})}
 function catOf(e){return CATS[e.cat]||CATS.other||{label:'Other',color:'#9e9e9e'}}
 function isLim(e){return !me.can_view||!!e.limited}
-function canEd(e){return me.is_admin||(me.can_edit&&(me.edit_groups||[]).indexOf(e.cat||'other')>=0)}
-function edCats(){return me.is_admin?null:(me.edit_groups||[]).filter(function(c){return CATS[c]})}
+function canEd(e){return me.is_admin||me.edit_all||((me.can_edit||me.can_propose)&&(me.edit_groups||[]).indexOf(e.cat||'other')>=0)}
+function edCats(){return me.is_admin||me.edit_all?null:(me.edit_groups||[]).filter(function(c){return CATS[c]})}
+function canWrite(){return me.can_edit||me.can_propose}
+/* APSG members: on other groups' entries they can only add or remove the APSG link */
+function apsgToggle(e){return me.apsg&&!e.limited&&e.cat!=='apsg'&&CATS.apsg}
 function ttl(e){return e.title||catOf(e).label}
 function links(e){return (e.links||[]).filter(function(c){return CATS[c]&&c!==e.cat})}
 function labels(e){return [catOf(e).label].concat(links(e).map(function(c){return CATS[c].label})).join(' + ')}
@@ -385,10 +391,10 @@ function render(){
   grouped().forEach(function(g){if(!g[1].length)return;h+='<div class="fg"><span class="fgt">'+g[0]+'</span>';g[1].forEach(function(c){h+='<label class="flt'+(hidden[c]?' off':'')+'"><input type="checkbox" data-flt="'+c+'"'+(hidden[c]?'':' checked')+'><i class="sw" style="background:'+CATS[c].color+'"></i>'+CATS[c].label+'</label>'});h+='</div>'});
   h+='<div class="fg"><span class="fgt"></span><button class="fbtn" data-fall="1">Show all</button><button class="fbtn" data-fall="0">Clear all</button></div>';
   h+='</div><div class="rside"><div class="rtop"><div class="status" id="status">'+esc(statusText)+'</div><button class="fbtn mob-only" id="filtbtn">Filters'+(Object.keys(hidden).length?' ('+Object.keys(hidden).length+' off)':'')+'</button></div>';
-  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
+  h+='<div class="rtop">'+(me.email?'<span class="who">'+esc(me.email)+(me.is_admin?' · admin':me.edit_all?' · ASC / SOG: full calendar':me.apsg?' · APSG member':me.can_view?' · '+esc((me.group_names.join(', ')||'group')+(me.role==='member'?' member':' lead')):' · public view only')+'</span><button class="fbtn" id="signoutbtn">Sign out</button>':'<button class="signin-btn" id="signinbtn">Sign in</button>')+'</div>';
   if(me.can_view)h+='<div class="rtop">'+(me.is_admin?'<button class="fbtn" id="adminbtn">Admin</button>':'')+'<button class="fbtn" id="exportbtn">Download Excel</button></div>';
   h+='</div></header>';
-  h+='<p class="hint">'+(me.is_admin?'Click any day to add or change entries. ':me.can_edit?'Click any day to see entries, and to add or change '+esc(me.group_names.join(', ')||'your group')+' entries. ':me.can_view?(me.sees_all?'Click any day to see its entries. As '+esc(me.group_names.join(', '))+' member you see full details for all groups. ':'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' and for activities; other groups\' entries show as a summary — contact the ASLP team for more. '):'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
+  h+='<p class="hint">'+(me.is_admin||me.edit_all?'Click any day to add or change entries. ':me.apsg?'Click any day to see entries with full details, and to add or change APSG entries. ':me.can_propose?'Click any day to see your CWG\'s entries, and to suggest changes for your CWG lead to approve. ASC and APSG meetings show as summaries. ':me.can_edit?'Click any day to see entries, and to add or change '+esc(me.group_names.join(', ')||'your group')+' entries. ':me.can_view?(me.sees_all?'Click any day to see its entries. As '+esc(me.group_names.join(', '))+' member you see full details for all groups. ':'Click any day to see its entries. Full details show for '+esc(me.group_names.join(', ')||'your group')+' and for activities; other groups\' entries show as a summary — contact the ASLP team for more. '):'This is the public summary: it shows which kinds of activities happen when. Details are private to ASLP groups — contact the ASLP team for more information. ')+'Tick boxes above filter by type.</p>';
   if(!loaded){h+='<div class="loading">Loading the calendar…</div></div>';document.getElementById('root').innerHTML=h;return}
   h+='<div class="ytabs">'+[['2027','2027'],['2028','2028']].map(function(y){return '<button data-ysel="'+y[0]+'" class="'+(YSEL===y[0]?'on':'')+'">'+y[1]+'</button>'}).join('')+'</div>';
   if(MOB){h+=mobileMonth();}else{
@@ -421,7 +427,7 @@ function render(){
   });
   }
   if(!me.can_view){h+='</div>'+insights(false)+quarterSummary();}else{
-  h+='</div>'+insights(true)+'<div class="list"><h2>'+(MOB?'Entries in '+MONTHS[MSEL]+' '+YSEL+' ('+state.events.filter(visible).filter(inMonth).length+')':Object.keys(hidden).length?'Filtered entries ('+state.events.filter(visible).length+' of '+state.events.length+')':'All entries ('+state.events.length+')')+'</h2>';
+  h+='</div>'+requestsHtml()+insights(true)+'<div class="list"><h2>'+(MOB?'Entries in '+MONTHS[MSEL]+' '+YSEL+' ('+state.events.filter(visible).filter(inMonth).length+')':Object.keys(hidden).length?'Filtered entries ('+state.events.filter(visible).length+' of '+state.events.length+')':'All entries ('+state.events.length+')')+'</h2>';
   var all=state.events.filter(visible).filter(function(e){return !MOB||inMonth(e)}).sort(function(a,b){return a.start<b.start?-1:a.start>b.start?1:0});
   if(!all.length)h+='<div class="emptymsg">Nothing planned yet — click a day above to start.</div>';
   all.forEach(function(e){h+='<div class="row" data-open="'+e.start+'"><i class="sw" style="background:'+catOf(e).color+'"></i>'+links(e).map(function(c2){return '<i class="sw" style="background:'+CATS[c2].color+';margin-left:-8px;border:1px solid #fff"></i>'}).join('')+'<span class="dt">'+esc(range(e))+'</span><span>'+esc(ttl(e))+(routeTxt(e)?' ('+esc(routeTxt(e))+')':'')+(aslfTxt(e)?' ('+esc(aslfTxt(e))+')':'')+(e.notes?' <span style="color:var(--muted)">— '+esc(e.notes.length>80?e.notes.slice(0,80)+'…':e.notes)+'</span>':'')+'</span></div>'});
@@ -551,15 +557,15 @@ function openDay(k){
 }
 function drawModal(f){
   var evs=evOn(curKey),h='<h3>'+esc(fmt(curKey))+'</h3><div class="sub">'+wkLabel(curKey)+'</div>';
-  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(placeTxt(e)?' · '+esc(placeTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(canEd(e)?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
-  if(!me.can_edit){
+  evs.forEach(function(e){h+='<div class="ex"><i class="sw" style="background:'+catOf(e).color+'"></i><div class="t">'+esc(ttl(e))+(isLim(e)?' <span class="lim">summary only</span>':'')+'<small>'+esc(range(e))+' · '+labels(e)+(routeTxt(e)?' · '+esc(routeTxt(e)):'')+(aslfTxt(e)?' · '+esc(aslfTxt(e)):'')+(placeTxt(e)?' · '+esc(placeTxt(e)):'')+(e.grp?' · repeats':'')+'</small>'+(e.notes?'<div class="nt">'+esc(e.notes)+'</div>':'')+'</div>'+(apsgToggle(e)?'<button class="lnk" data-apsg="'+e.id+'">'+((e.links||[]).indexOf('apsg')>=0?'Unlink APSG':'Link APSG')+'</button>':'')+(canEd(e)?'<button class="lnk" data-edit="'+e.id+'">Edit</button><button class="lnk del" data-del="'+e.id+'">Delete</button>'+(e.grp?'<button class="lnk del" data-delgrp="'+e.grp+'">Delete all</button>':''):'')+'</div>'});
+  if(!canWrite()){
     if(!evs.length)h+='<p class="sub">Nothing planned on this day.</p>';
     var anyLim=evs.some(isLim);
     h+='<p class="sub" style="margin-top:12px">'+(!me.can_view?'This public summary only shows the type of activity. Details are private to ASLP groups — please contact the ASLP team if you need more information.':anyLim?'Entries marked <b>summary only</b> belong to other ASLP groups. Contact the ASLP team if you need their details.':'Only admins and group leads can add or change entries.')+'</p>';
     h+='<div class="btns">'+(me.email?'':'<button class="b" id="signinbtn">Sign in</button>')+'<button class="b p" id="f-cancel">Close</button></div>';
     document.getElementById('modal').innerHTML=h;return;
   }
-  if(!me.is_admin&&!editId)h+='<p class="sub" style="margin-top:12px">As a group lead you can add and change '+esc(me.group_names.join(', ')||'your group')+' entries. Other groups\' entries are view only.</p>';
+  if(!me.is_admin&&!me.edit_all&&!editId)h+='<p class="sub" style="margin-top:12px">'+(me.can_propose?'You can suggest new or changed '+esc(me.group_names.join(', ')||'CWG')+' entries. They go to your CWG lead, and appear once approved.':me.apsg?'You can add and change APSG entries. On other groups\' entries you can link or unlink the APSG.':'As a group lead you can add and change '+esc(me.group_names.join(', ')||'your group')+' entries. Other groups\' entries are view only.')+'</p>';
   h+='<label>'+(editId?'Edit entry':'Add entry')+'</label><input id="f-title" maxlength="80" placeholder="e.g. Pakistan monitoring visit" value="'+esc(f.title)+'">';
   h+='<label>Details / notes</label><textarea id="f-notes" rows="3" maxlength="2000" placeholder="Agenda, venue, Teams link, who is attending…">'+esc(f.notes||'')+'</textarea>';
   h+='<label>Type</label><select id="f-cat">';
@@ -570,7 +576,7 @@ function drawModal(f){
   h+='<div class="two"><div><label>From</label><input type="date" id="f-start" min="2027-01-01" max="2028-12-31" value="'+f.start+'"></div><div><label>To</label><input type="date" id="f-end" min="2027-01-01" max="2028-12-31" value="'+f.end+'"></div></div>';
   h+='<div id="f-reprow" style="display:'+(isGroupCat(f.cat)&&f.kind==='activity'?'none':'block')+'"><div class="two"><div><label>Repeat</label><select id="f-rep">'+(editId?'<option value="keep">'+(f.grp?'Keep current repeat':'Keep as is (does not repeat)')+'</option>':'')+'<option value="">'+(editId&&f.grp?'Stop repeating (remove later dates)':'Does not repeat')+'</option><option value="w1">Every week</option><option value="w2">Every 2 weeks</option><option value="m1">Every month (same date)</option><option value="mn">Every month (same weekday, e.g. 2nd Tue)</option><option value="m2">Every 2 months</option><option value="m3">Every 3 months</option><option value="m6">Every 6 months</option><option value="y1">Every year</option></select></div><div><label>Until</label><input type="date" id="f-until" min="2027-01-01" max="2028-12-31" value="2028-12-31"></div></div><label class="chk"><input type="checkbox" id="f-wd" checked>Keep repeats on work days (Mon–Fri): Saturday and Sunday move to the Monday after</label>'+(editId&&f.grp?'<div class="sub" style="margin-top:6px">Changing the repeat replaces this date and all later dates in this series. Earlier dates stay as they are.</div>':'')+'</div>';
   if(editId&&f.grp)h+='<label>This is a repeating entry. Save changes to:</label><label class="chk" style="margin-top:4px"><input type="radio" name="f-scope" id="f-one" checked>Only this date</label><label class="chk" style="margin-top:4px"><input type="radio" name="f-scope" id="f-all">All dates in this series (name, type, links and notes; each date stays where it is)</label>';
-  h+='<div class="err" id="f-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b p" id="f-save">'+(editId?'Save changes':'Add')+'</button></div>';
+  h+='<div class="err" id="f-err"></div><div class="btns"><button class="b" id="f-cancel">Close</button><button class="b p" id="f-save">'+(me.can_propose&&!me.can_edit?'Send to CWG lead for approval':editId?'Save changes':'Add')+'</button></div>';
   document.getElementById('modal').innerHTML=h;
 }
 function closeModal(){document.getElementById('ov').classList.remove('on');curKey=null;editId=null}
@@ -687,21 +693,38 @@ function load(quiet){
 /* send only what changed since the last load */
 function persist(){
   render();
-  if(!me.can_edit){setStatus('Sign in to save changes');return}
+  if(!me.can_edit&&!me.can_propose){setStatus('Sign in to save changes');return}
   var up=[],cur={};
   state.events.forEach(function(e){cur[e.id]=1;var s=sig(e);if(synced[e.id]!==s)up.push(clean(e))});
   var del=Object.keys(synced).filter(function(id){return !cur[id]});
   if(!up.length&&!del.length)return;
   saving=true;setStatus('Saving…');
+  if(!me.can_edit&&me.can_propose){
+    sb.rpc('cal_propose',{p_upserts:up,p_deletes:del}).then(function(r){saving=false;if(r.error)throw r.error;setStatus('Sent to your CWG lead for approval');loadRequests();load(true)})
+      .catch(function(e){saving=false;setStatus('Not sent: '+errText(e));load(true)});
+    return;
+  }
   sb.rpc('cal_save',{p_upserts:up,p_deletes:del}).then(function(r){
     saving=false;if(r.error)throw r.error;
     up.forEach(function(e){synced[e.id]=sig(e)});del.forEach(function(id){delete synced[id]});
     setStatus('All changes saved');load(true);
   }).catch(function(e){saving=false;setStatus('Not saved: '+errText(e));load(true)});
 }
+/* CWG members' suggested changes, and the CWG lead's approvals */
+var requests=[];
+function loadRequests(){if(!me.email||!(me.can_propose||me.can_edit))return;sb.rpc('cal_requests_list').then(function(r){if(r.error)return;requests=r.data||[];if(document.getElementById('root').firstChild&&!document.getElementById('ov').classList.contains('on'))render()}).catch(function(){})}
+function requestsHtml(){
+  var rev=requests.filter(function(q){return q.canReview}),mine=requests.filter(function(q){return q.mine});
+  if(!rev.length&&!mine.length)return '';
+  var h='<div class="list reqs">';
+  if(rev.length){h+='<h2>Changes waiting for your approval ('+rev.length+')</h2>';rev.forEach(function(q){var c=CATS[q.cwg];h+='<div class="req"><i class="sw" style="background:'+(c?c.color:'#999')+'"></i><div><b>'+esc(q.summary||'Calendar change')+'</b><small>'+esc(q.email)+' · '+esc(c?c.label:q.cwg)+'</small></div><button class="b p" data-req-ok="'+q.id+'">Approve</button><button class="b" data-req-no="'+q.id+'">Decline</button></div>'})}
+  if(mine.length){h+='<h2'+(rev.length?' style="margin-top:16px"':'')+'>Your suggested changes</h2>';mine.forEach(function(q){h+='<div class="req"><i class="sw" style="background:'+(CATS[q.cwg]?CATS[q.cwg].color:'#999')+'"></i><div><b>'+esc(q.summary||'Calendar change')+'</b><small>'+(q.status==='pending'?'Waiting for your CWG lead':q.status==='approved'?'Approved and on the calendar':'Declined by your CWG lead')+'</small></div></div>'})}
+  return h+'</div>';
+}
+function reviewReq(id,ok){setStatus(ok?'Approving…':'Declining…');sb.rpc('cal_review',{p_id:id,p_ok:ok}).then(function(r){if(r.error)throw r.error;setStatus(ok?'Approved and added to the calendar':'Declined');loadRequests();load(true)}).catch(function(e){setStatus('Not done: '+errText(e))})}
 /* who is signed in */
 function refreshMe(){
-  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',role:d.role||'',can_view:!!d.can_view,can_edit:!!d.can_edit,is_admin:!!d.is_admin,group_names:d.group_names||[],edit_groups:d.edit_groups||[],sees_all:!!d.sees_all};return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
+  return sb.rpc('cal_whoami').then(function(r){var d=(r&&r.data)||{};me={email:d.email||'',role:d.role||'',can_view:!!d.can_view,can_edit:!!d.can_edit,edit_all:!!d.edit_all,apsg:!!d.apsg,can_propose:!!d.can_propose,is_admin:!!d.is_admin,group_names:d.group_names||[],edit_groups:d.edit_groups||[],sees_all:!!d.sees_all};loadRequests();return load()}).catch(function(){me={email:'',can_view:false,can_edit:false,is_admin:false,group_names:[]};return load()});
 }
 function hhmm(iso){try{return new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}catch(e){return ''}}
 function limitSegs(left,lim,known){var h='<div class="lb-segs" role="img" aria-label="'+(known?left+' of '+lim+' sign-ins left':lim+' sign-ins per hour')+'">';for(var k=0;k<lim;k++)h+='<span class="'+(!known?'unk':k<left?'on':'')+'"></span>';return h+'</div>'}
@@ -879,6 +902,9 @@ document.addEventListener('click',function(ev){
   var row=t.closest&&t.closest('[data-open]');if(row){openDay(row.getAttribute('data-open'));return}
   if(t.id==='ov'||t.id==='f-cancel'){closeModal();return}
   if(t.id==='f-save'){save();return}
+  if(t.getAttribute('data-req-ok')){reviewReq(t.getAttribute('data-req-ok'),true);return}
+  if(t.getAttribute('data-req-no')){reviewReq(t.getAttribute('data-req-no'),false);return}
+  if(t.getAttribute('data-apsg')){var ida=t.getAttribute('data-apsg');state.events=state.events.map(function(x){if(x.id!==ida)return x;var y=JSON.parse(JSON.stringify(x)),l=(y.links||[]).slice(),i=l.indexOf('apsg');if(i>=0)l.splice(i,1);else l.push('apsg');y.links=l.length?l:undefined;return y});closeModal();persist();return}
   if(t.getAttribute('data-edit')){var id=t.getAttribute('data-edit');var e=state.events.filter(function(x){return x.id===id})[0];if(e){editId=id;drawModal(e)}return}
   if(t.getAttribute('data-delgrp')){var g=t.getAttribute('data-delgrp');state.events=state.events.filter(function(x){return x.grp!==g});closeModal();persist();return}
   if(t.getAttribute('data-del')){var id2=t.getAttribute('data-del');state.events=state.events.filter(function(x){return x.id!==id2});closeModal();persist();return}

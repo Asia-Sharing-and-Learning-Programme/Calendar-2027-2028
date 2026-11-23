@@ -749,14 +749,10 @@ var signinStatus=null;
 function openSignin(){
   curKey=null;editId=null;
   document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Sign in with your email and PIN. It\'s the same sign-in as the ASLP website and CD Strategies. New here? <a href="/#/console">See how to get set up</a>.</p></div><div id="pin-box"></div>'+
-    '<details class="si-alt"><summary>Or email me a sign-in link instead</summary><div class="signin"><p>Enter the Gmail your ASLP admin registered for you. We\'ll email you a sign-in link — open it on this device.</p></div><div id="si-limit"></div><input id="si-email" type="email" placeholder="yourname@gmail.com" autocomplete="email"><div class="err" id="si-err"></div><div class="btns"><button class="b signin-btn" id="si-go">Send sign-in link</button></div></details>'+
     '<div class="btns"><button class="b" id="f-cancel">Close</button></div>';
   document.getElementById('ov').classList.add('on');
   if(window.ASLPPin)ASLPPin.mount(document.getElementById('pin-box'),sb,{onSignedIn:function(){closeModal();refreshMe().then(function(){ASLPPin.altPrompt(sb)})}});
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
-  signinStatus=null;var lb=document.getElementById('si-limit');if(lb)lb.innerHTML=limitBox(null);
-  sb.rpc('signin_status_for',{p_email:''}).then(function(r){if(r.data&&r.data.limit){signinLimitN=r.data.limit;var b2=document.getElementById('si-limit');if(b2&&!signinStatus)b2.innerHTML=limitBox(null)}}).catch(function(){});
-  var ie=document.getElementById('si-email');if(ie)ie.addEventListener('input',function(){clearTimeout(signinCheckT);var er=document.getElementById('si-err');if(er)er.textContent='';signinCheckT=setTimeout(checkMyLimit,450)});
 }
 /* sign-in that survives email link scanners (e.g. Microsoft 365 Safe Links): a code, or a link that needs a click */
 var codeEmail='',pendingHash=null,pendingType='email';
@@ -811,7 +807,7 @@ function renderAdmin(){
     h+='<div class="keyrow"><span><b>Member</b> sees full details of their group (ASC and APSG members: all groups)</span><span><b>Lead</b> sees all groups, edits only their own group; hidden types if allowed</span><span><b>Admin</b> sees and changes everything</span></div>';
     h+='<table class="simple"><thead><tr><th>Email</th><th style="width:120px">Rights</th><th style="width:200px">Group</th><th style="width:70px"></th></tr></thead><tbody id="adm-users">';
     var gopts=[['','—']].concat(groupTypes().map(function(x){return [x.key,x.label]}));
-    adm.users.forEach(function(u,i){var mine=u.email===adm.me;h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="yourname@gmail.com"'+(mine?' readonly':'')+'></td><td>'+sel('role',ROLES,u.role)+'</td><td>'+sel('grp',gopts,u.role==='admin'?'':u.grp,u.role==='admin'?' disabled':'')+'</td><td>'+(mine?'<span class="msg">you</span>':'<button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button>')+'</td></tr>'});
+    adm.users.forEach(function(u,i){var mine=u.email===adm.me;h+='<tr data-i="'+i+'"><td><input data-f="email" type="email" value="'+esc(u.email)+'" placeholder="name@salvationarmy.org"'+(mine?' readonly':'')+'></td><td>'+sel('role',ROLES,u.role)+'</td><td>'+sel('grp',gopts,u.role==='admin'?'':u.grp,u.role==='admin'?' disabled':'')+'</td><td>'+(mine?'<span class="msg">you</span>':'<button class="lnk del" data-a="rm-user" data-i="'+i+'">Remove</button>')+'</td></tr>'});
     h+='</tbody></table><div class="bar"><button class="b" data-a="add-user">+ Add person</button><button class="b p" data-a="save-users">Save</button></div>';
   }
   if(admTab==='groups'){
@@ -872,7 +868,7 @@ document.addEventListener('click',function(ev){
   if(a==='tab'){admTab=t.getAttribute('data-tab');admMsg='';renderAdmin();if(admTab==='signins'&&!adm.signins)loadSignins();return}
   if(a==='add-user'){adm.users.push({email:'',role:'member',grp:''});renderAdmin();var ins=document.querySelectorAll('#adm-users input');if(ins.length)ins[ins.length-1].focus();return}
   if(a==='rm-user'){adm.users.splice(i,1);renderAdmin();admSay('Removed — click Save to confirm');return}
-  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@gmail\.com$/i.test(u.email)});if(bad.length){admSay('Please use a Gmail address (ending in @gmail.com): '+bad[0].email,true);return}var ng=us.filter(function(u){return u.role!=='admin'&&!u.grp});if(ng.length){admSay('Choose a group for '+ng[0].email,true);return}admSave('cal_admin_set_users',{p_users:us},'Saved');return}
+  if(a==='save-users'){var us=adm.users.filter(function(u){return u.email});var bad=us.filter(function(u){return !/^[^@\s]+@[^@\s]+\.[^@\s]+$/i.test(u.email)});if(bad.length){admSay('This email doesn\'t look right: '+bad[0].email,true);return}var ng=us.filter(function(u){return u.role!=='admin'&&!u.grp});if(ng.length){admSay('Choose a group for '+ng[0].email,true);return}admSave('cal_admin_set_users',{p_users:us},'Saved');return}
   if(a==='save-groups'){admSave('cal_admin_set_setting',{p_key:'lead_groups',p_value:leadGroupsFromTypes()},'Saved');return}
   if(a==='add-type'){adm.types.push({key:'',label:'',color:'#5c6bc0',group:'Activities',public:true});renderAdmin();var ti=document.querySelectorAll('#adm-types input[data-f=label]');if(ti.length)ti[ti.length-1].focus();return}
   if(a==='rm-type'){adm.types.splice(i,1);renderAdmin();admSay('Removed — click Save to confirm');return}

@@ -751,7 +751,7 @@ function openSignin(){
   document.getElementById('modal').innerHTML='<h3>Sign in</h3><div class="signin"><p>Sign in with your email and PIN. It\'s the same sign-in as the ASLP website and CD Strategies. New here? <a href="/#/console">See how to get set up</a>.</p></div><div id="pin-box"></div>'+
     '<div class="btns"><button class="b" id="f-cancel">Close</button></div>';
   document.getElementById('ov').classList.add('on');
-  if(window.ASLPPin)ASLPPin.mount(document.getElementById('pin-box'),sb,{onSignedIn:function(){closeModal();refreshMe().then(function(){ASLPPin.altPrompt(sb)})}});
+  if(window.ASLPPin)ASLPPin.mount(document.getElementById('pin-box'),sb,{guide:true,onSignedIn:function(){closeModal();refreshMe().then(function(){ASLPPin.altPrompt(sb)})}});
   setTimeout(function(){var i=document.getElementById('si-email');if(i)i.focus()},30);
 }
 /* sign-in that survives email link scanners (e.g. Microsoft 365 Safe Links): a code, or a link that needs a click */
